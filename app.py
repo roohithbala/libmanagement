@@ -136,6 +136,36 @@ def delete_book_route(book_id):
 @app.route("/admin")
 def admin_dashboard():
     return render_template("admin_dashboard.html", books=get_all_books(), users=User.query.all())
+@app.route("/update_book/<int:book_id>", methods=["GET", "POST"])
+def update_book_route(book_id):
+    if "user_id" not in session or session.get("role") not in ["admin", "librarian"]:
+        flash("Access Denied!", "danger")
+        return redirect(url_for("home"))
+
+    book = Book.query.get_or_404(book_id)
+
+    if request.method == "POST":
+        book.title = request.form["title"]
+        book.author = request.form["author"]
+        book.genre = request.form["genre"]
+        book.publication_year = request.form["publication_year"]
+        book.isbn = request.form["isbn"]
+
+        try:
+            db.session.commit()
+            flash("Book updated successfully!", "success")
+
+            # Redirect based on user role
+            if session.get("role") == "admin":
+                return redirect(url_for("admin_dashboard"))
+            elif session.get("role") == "librarian":
+                return redirect(url_for("librarian_dashboard"))
+        
+        except Exception:
+            db.session.rollback()
+            flash("Error updating book!", "danger")
+
+    return render_template("update_book.html", book=book)
 
 @app.route("/librarian")
 def librarian_dashboard():

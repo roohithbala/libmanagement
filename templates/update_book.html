@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Update Book</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css">
+</head>
+<body class="container mt-5">
+    <h2 class="text-primary">Update Book</h2>
+
+    <!-- Display Flash Messages -->
+    {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+            <div class="alert alert-{{ messages[0][0] }}">
+                {{ messages[0][1] }}
+            </div>
+        {% endif %}
+    {% endwith %}
+
+    <!-- Form to update book details -->
+    <form method="POST">
+        <div class="mb-3">
+            <label class="form-label">Title</label>
+            <input type="text" class="form-control" name="title" value="{{ book.title }}" required>
+        </div>
+        <div class="mb-3">
+            <label class="form-label">Author</label>
+            <input type="text" class="form-control" name="author" value="{{ book.author }}" required>
+        </div>
+        <div class="mb-3">
+            <label class="form-label">Genre</label>
+            <input type="text" class="form-control" name="genre" value="{{ book.genre }}" required>
+        </div>
+        <div class="mb-3">
+            <label class="form-label">Publication Year</label>
+            <input type="number" class="form-control" name="publication_year" value="{{ book.publication_year }}" required>
+        </div>
+        <div class="mb-3">
+            <label class="form-label">ISBN</label>
+            <input type="text" class="form-control" name="isbn" value="{{ book.isbn }}" required>
+        </div>
+        
+        <button type="submit" class="btn btn-success">Update Book</button>
+        
+        <!-- Dynamic Cancel Button based on Role -->
+        {% if session.get('role') == 'admin' %}
+            <a href="{{ url_for('admin_dashboard') }}" class="btn btn-secondary">Cancel</a>
+        {% elif session.get('role') == 'librarian' %}
+            <a href="{{ url_for('librarian_dashboard') }}" class="btn btn-secondary">Cancel</a>
+        {% else %}
+            <a href="{{ url_for('home') }}" class="btn btn-secondary">Cancel</a>
+        {% endif %}
+    </form>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>
