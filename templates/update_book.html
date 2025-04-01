@@ -9,7 +9,7 @@
 <body class="container mt-5">
     <h2 class="text-primary">Update Book</h2>
 
-    <!-- Display Flash Messages -->
+
     {% with messages = get_flashed_messages(with_categories=true) %}
         {% if messages %}
             <div class="alert alert-{{ messages[0][0] }}">
@@ -18,7 +18,6 @@
         {% endif %}
     {% endwith %}
 
-    <!-- Form to update book details -->
     <form method="POST">
         <div class="mb-3">
             <label class="form-label">Title</label>
@@ -42,8 +41,7 @@
         </div>
         
         <button type="submit" class="btn btn-success">Update Book</button>
-        
-        <!-- Dynamic Cancel Button based on Role -->
+      
         {% if session.get('role') == 'admin' %}
             <a href="{{ url_for('admin_dashboard') }}" class="btn btn-secondary">Cancel</a>
         {% elif session.get('role') == 'librarian' %}
