@@ -1,0 +1,3 @@
+import secrets
+print(secrets.token_hex(32))
+secretkey="71a68fa73087b701569296aa4e9f7dc4fd4412a9ba347dc0524136fa69adba39"
