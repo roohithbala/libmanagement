@@ -5,9 +5,37 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Librarian Dashboard</title>
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css">
+    <style>
+        body {
+            background-color: #f8f9fa;
+        }
+        .card {
+            border: none;
+            border-radius: 10px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+        .btn-success {
+            background-color: #6a11cb;
+            border: none;
+        }
+        .btn-success:hover {
+            background-color: #2575fc;
+        }
+        .btn-warning {
+            color: white;
+        }
+        .table thead {
+            background-color: #343a40;
+            color: white;
+        }
+        .table tbody tr:hover {
+            background-color: #f1f1f1;
+        }
+    </style>
 </head>
 <body class="container mt-5">
 
+ 
     <header class="d-flex justify-content-between align-items-center mb-4">
         <h2 class="text-primary">Librarian Dashboard</h2>
         <nav>
@@ -16,7 +44,7 @@
         </nav>
     </header>
 
-    <!-- Flash Messages -->
+ 
     {% with messages = get_flashed_messages(with_categories=True) %}
         {% if messages %}
             {% for category, message in messages %}
@@ -28,12 +56,15 @@
         {% endif %}
     {% endwith %}
 
+
     <div class="card shadow-sm p-4">
-        <h4 class="mb-3">Book Management</h4>
-        <a href="{{ url_for('add_book_route') }}" class="btn btn-success mb-3">Add New Book</a>
+        <div class="d-flex justify-content-between align-items-center mb-3">
+            <h4>Book Management</h4>
+            <a href="{{ url_for('add_book_route') }}" class="btn btn-success">Add New Book</a>
+        </div>
         
-        <table class="table table-bordered">
-            <thead class="table-dark">
+        <table class="table table-bordered table-hover">
+            <thead>
                 <tr>
                     <th>ID</th>
                     <th>Title</th>
@@ -56,9 +87,13 @@
                     <td>{{ book.isbn }}</td>
                     <td>{{ book.added_by }}</td>
                     <td>
-                        <a href="{{ url_for('delete_book_route', book_id=book.id) }}" class="btn btn-danger btn-sm">Delete</a>
                         <a href="{{ url_for('update_book_route', book_id=book.id) }}" class="btn btn-warning btn-sm">Update</a>
-
+                        <a href="{{ url_for('delete_book_route', book_id=book.id) }}" class="btn btn-danger btn-sm">Delete</a>
+                        {% if book.status == 'Taken' %}
+                        <form method="POST" action="{{ url_for('unlock_book_route', book_id=book.id) }}" class="d-inline">
+                            <button type="submit" class="btn btn-secondary btn-sm">Unlock</button>
+                        </form>
+                        {% endif %}
                     </td>
                 </tr>
                 {% endfor %}

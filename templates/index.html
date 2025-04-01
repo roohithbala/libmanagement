@@ -5,23 +5,79 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Library Management System</title>
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <style>
+        body {
+            background-color: #f8f9fa;
+        }
+        .hero {
+            background: linear-gradient(to right, #6a11cb, #2575fc);
+            color: white;
+            padding: 50px 20px;
+            text-align: center;
+            border-radius: 10px;
+        }
+        .hero h1 {
+            font-size: 3rem;
+            font-weight: bold;
+        }
+        .hero p {
+            font-size: 1.2rem;
+        }
+        .card {
+            border: none;
+            border-radius: 10px;
+        }
+        .btn-custom {
+            background-color: #6a11cb;
+            color: white;
+        }
+        .btn-custom:hover {
+            background-color: #2575fc;
+            color: white;
+        }
+    </style>
 </head>
 <body class="container mt-5">
-<header i class="fas fa-users-class">
-    <h1>Library Management System</h1>
-</i>
-        <nav>
-            {% if session["user_id"] %}
-                <span>Welcome, {{ session["username"] }} ({{ session["role"] }})</span>
-                <a href="{{ url_for('logout') }}" class="btn btn-danger btn-sm ms-3">Logout</a>
-            {% else %}
-                <a href="{{ url_for('login') }}" class="btn btn-primary">Login</a>
-                <a href="{{ url_for('register') }}" class="btn btn-success">Register</a>
-            {% endif %}
-        </nav>
-    </header>
+    <!-- Navigation Bar -->
+    <nav class="navbar navbar-expand-lg navbar-dark bg-dark mb-4">
+        <div class="container-fluid">
+            <a class="navbar-brand" href="#"><i class="fas fa-book"></i> Library Management</a>
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav" aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="collapse navbar-collapse" id="navbarNav">
+                <ul class="navbar-nav ms-auto">
+                    {% if session["user_id"] %}
+                        <li class="nav-item">
+                            <span class="nav-link">Welcome, {{ session["username"] }} ({{ session["role"] }})</span>
+                        </li>
+                        <li class="nav-item">
+                            <a href="{{ url_for('logout') }}" class="btn btn-danger btn-sm ms-3">Logout</a>
+                        </li>
+                    {% else %}
+                        <li class="nav-item">
+                            <a href="{{ url_for('login') }}" class="btn btn-primary me-2">Login</a>
+                        </li>
+                        <li class="nav-item">
+                            <a href="{{ url_for('register') }}" class="btn btn-success">Register</a>
+                        </li>
+                    {% endif %}
+                </ul>
+            </div>
+        </div>
+    </nav>
 
-    <!-- Flash Messages -->
+    <div class="hero mb-4">
+        <h1>Welcome to the Library Management System</h1>
+        <p>Explore, manage, and enjoy a seamless library experience.</p>
+        {% if not session["user_id"] %}
+            <a href="{{ url_for('login') }}" class="btn btn-custom btn-lg me-2">Login</a>
+            <a href="{{ url_for('register') }}" class="btn btn-light btn-lg">Register</a>
+        {% endif %}
+    </div>
+
+
     {% with messages = get_flashed_messages(with_categories=True) %}
         {% if messages %}
             {% for category, message in messages %}
@@ -32,9 +88,10 @@
             {% endfor %}
         {% endif %}
     {% endwith %}
+
     <div class="card p-4 shadow-sm">
-        <h4>Explore Our Library</h4>
-        <p>Welcome to the Library Management System! <h1><b>Please Login Or Signup to Continue</b><h1></p>
+        <h4 class="text-center mb-4">Explore Our Library</h4>
+        <p class="text-center">Welcome to the Library Management System! Please login or sign up to continue.</p>
 
         <div class="text-center">
             {% if session["role"] == "admin" %}
@@ -43,11 +100,13 @@
                 <a href="{{ url_for('librarian_dashboard') }}" class="btn btn-dark">Librarian Dashboard</a>
             {% elif session["role"] == "user" %}
                 <a href="{{ url_for('user_dashboard') }}" class="btn btn-dark">User Dashboard</a>
-            {% else %}
-                
             {% endif %}
         </div>
     </div>
+
+    <footer class="mt-5 text-center">
+        <p class="text-muted">&copy; 2025 Library Management System. All rights reserved.</p>
+    </footer>
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 </body>

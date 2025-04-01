@@ -1,12 +1,12 @@
 from flask import Flask, render_template, request, redirect, url_for, session, flash
 from flask_sqlalchemy import SQLAlchemy
 from werkzeug.security import generate_password_hash, check_password_hash
-import book
 app = Flask(__name__)
 app.secret_key = "supersecretkey"
 app.config["SQLALCHEMY_DATABASE_URI"] = "sqlite:///library.db"
 app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
 db = SQLAlchemy(app)
+
 class User(db.Model):
     __tablename__ = "users"
     id = db.Column(db.Integer, primary_key=True)
@@ -61,7 +61,6 @@ def home():
     books = get_all_books()
     return render_template("index.html", books=books)
 
-
 @app.route("/register", methods=["GET", "POST"])
 def register():
     if request.method == "POST":
@@ -107,6 +106,7 @@ def logout():
     session.clear()
     flash("You have been logged out.", "info")
     return redirect(url_for("home"))
+
 @app.route("/add_book", methods=["GET", "POST"])
 def add_book_route():
     if "user_id" not in session or session.get("role") not in ["admin", "librarian"]:
@@ -125,6 +125,7 @@ def add_book_route():
             flash("Failed to add book.", "danger")
         return redirect(url_for("home"))
     return render_template("add_book.html")
+
 @app.route("/delete_book/<int:book_id>")
 def delete_book_route(book_id):
     if "user_id" not in session or session.get("role") not in ["admin", "librarian"]:
@@ -133,9 +134,11 @@ def delete_book_route(book_id):
     delete_book(book_id)
     flash("Book deleted successfully!", "success")
     return redirect(url_for("home"))
+
 @app.route("/admin")
 def admin_dashboard():
     return render_template("admin_dashboard.html", books=get_all_books(), users=User.query.all())
+
 @app.route("/update_book/<int:book_id>", methods=["GET", "POST"])
 def update_book_route(book_id):
     if "user_id" not in session or session.get("role") not in ["admin", "librarian"]:
@@ -174,6 +177,51 @@ def librarian_dashboard():
 @app.route("/user")
 def user_dashboard():
     return render_template("user_dashboard.html", books=get_all_books())
+
+@app.route("/take_book/<int:book_id>", methods=["POST"])
+def take_book_route(book_id):
+    """Allow a user to take a book if it is available."""
+    if "user_id" not in session:
+        flash("Please log in to take a book.", "danger")
+        return redirect(url_for("login"))
+
+    book = Book.query.get(book_id)
+    if book and book.status == "Available":
+        try:
+            book.status = "Taken"
+            db.session.commit()
+            flash("Book taken successfully!", "success")
+        except Exception as e:
+            db.session.rollback()
+            flash("Error taking book. Please try again.", "danger")
+    else:
+        flash("Book is not available.", "danger")
+
+    return redirect(url_for("user_dashboard"))
+
+@app.route("/unlock_book/<int:book_id>", methods=["POST"])
+def unlock_book_route(book_id):
+    """Unlock a book by setting its status back to 'Available'."""
+    if "user_id" not in session or session.get("role") not in ["admin", "librarian"]:
+        flash("Access Denied!", "danger")
+        return redirect(url_for("home"))
+
+    book = Book.query.get(book_id)
+    if book and book.status == "Taken":
+        try:
+            book.status = "Available"
+            db.session.commit()
+            flash("Book unlocked successfully!", "success")
+        except Exception as e:
+            db.session.rollback()
+            flash("Error unlocking book. Please try again.", "danger")
+    else:
+        flash("Book is already available or does not exist.", "danger")
+
+    if session.get("role") == "admin":
+        return redirect(url_for("admin_dashboard"))
+    elif session.get("role") == "librarian":
+        return redirect(url_for("librarian_dashboard"))
 
 if __name__ == "__main__":
     app.run(debug=True)

@@ -2,35 +2,84 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Register - Library Management</title>
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css">
+  <style>
+    body {
+      background-color: #f8f9fa;
+    }
+    .register-container {
+      max-width: 500px;
+      margin: 50px auto;
+    }
+    .card {
+      border: none;
+      border-radius: 10px;
+      box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    }
+    .btn-success {
+      background-color: #6a11cb;
+      border: none;
+    }
+    .btn-success:hover {
+      background-color: #2575fc;
+    }
+    .form-label {
+      font-weight: bold;
+    }
+    .text-muted {
+      font-size: 0.9rem;
+    }
+  </style>
 </head>
-<body class="container mt-4">
-  <h2>Register</h2>
-  <form method="POST">
-    <div class="mb-3">
-      <label for="username" class="form-label">Username:</label>
-      <input type="text" class="form-control" id="username" name="username" placeholder="Choose a username" required>
+<body>
+  <div class="register-container">
+    <h2 class="text-center mb-4">Register</h2>
+
+ 
+    {% with messages = get_flashed_messages(with_categories=True) %}
+      {% if messages %}
+        {% for category, message in messages %}
+          <div class="alert alert-{{ category }} alert-dismissible fade show" role="alert">
+            {{ message }}
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+          </div>
+        {% endfor %}
+      {% endif %}
+    {% endwith %}
+
+    <!-- Registration Form -->
+    <form method="POST" class="card p-4">
+      <div class="mb-3">
+        <label for="username" class="form-label">Username</label>
+        <input type="text" class="form-control" id="username" name="username" placeholder="Choose a username" required>
+      </div>
+      <div class="mb-3">
+        <label for="email" class="form-label">Email</label>
+        <input type="email" class="form-control" id="email" name="email" placeholder="Enter your email" required>
+      </div>
+      <div class="mb-3">
+        <label for="password" class="form-label">Password</label>
+        <input type="password" class="form-control" id="password" name="password" placeholder="Create a password" required>
+      </div>
+      <div class="mb-3">
+        <label for="role" class="form-label">Select Role</label>
+        <select class="form-select" id="role" name="role" required>
+          <option value="user">User</option>
+          <option value="librarian">Librarian</option>
+          <option value="admin">Admin</option>
+        </select>
+      </div>
+      <button type="submit" class="btn btn-success w-100">Register</button>
+    </form>
+
+   
+    <div class="text-center mt-3">
+      <p class="text-muted">Already have an account? <a href="{{ url_for('login') }}">Login here</a>.</p>
     </div>
-    <div class="mb-3">
-      <label for="email" class="form-label">Email:</label>
-      <input type="email" class="form-control" id="email" name="email" placeholder="Enter your email" required>
-    </div>
-    <div class="mb-3">
-      <label for="password" class="form-label">Password:</label>
-      <input type="password" class="form-control" id="password" name="password" placeholder="Create a password" required>
-    </div>
-    <div class="mb-3">
-      <label for="role" class="form-label">Select Role:</label>
-      <select class="form-control" id="role" name="role" required>
-        <option value="user">User</option>
-        <option value="librarian">Librarian</option>
-        <option value="admin">Admin</option>
-      </select>
-    </div>
-    <button type="submit" class="btn btn-success">Register</button>
-  </form>
-  <br>
-  <p>Already have an account? <a href="{{ url_for('login') }}">Login here</a>.</p>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 </body>
 </html>

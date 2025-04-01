@@ -14,9 +14,10 @@ class Book(db.Model):
     added_by = db.Column(db.String(100), nullable=False)
 
 def add_book(title, author, genre, publication_year, isbn, added_by):
+    """Add a new book to the database."""
     try:
         if Book.query.filter_by(isbn=isbn).first():
-            print(" Error: Book with ISBN already exists.")
+            print("Error: Book with ISBN already exists.")
             return False
         
         new_book = Book(
@@ -37,19 +38,41 @@ def add_book(title, author, genre, publication_year, isbn, added_by):
         return False
 
 def get_all_books():
-    
-    return Book.query.all()
+    """Retrieve all books from the database."""
+    try:
+        return Book.query.all()
+    except Exception as e:
+        print(f"Error retrieving books: {e}")
+        return []
 
 def delete_book(book_id):
-    
+    """Delete a book from the database by its ID."""
     try:
         book = Book.query.get(book_id)
         if book:
             db.session.delete(book)
             db.session.commit()
+            print("Book deleted successfully!")
             return True
+        print("Error: Book not found.")
         return False
     except Exception as e:
-        print(f" Error deleting book: {e}")
+        print(f"Error deleting book: {e}")
+        db.session.rollback()
+        return False
+
+def take_book(book_id):
+    """Mark a book as 'Taken' if it is available."""
+    try:
+        book = Book.query.get(book_id)
+        if book and book.status == "Available":
+            book.status = "Taken"
+            db.session.commit()
+            print("Book taken successfully!")
+            return True
+        print("Error: Book is not available.")
+        return False
+    except Exception as e:
+        print(f"Error taking book: {e}")
         db.session.rollback()
         return False
