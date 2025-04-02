@@ -1,78 +1,68 @@
-from flask_sqlalchemy import SQLAlchemy
+import sqlite3
 
-db = SQLAlchemy()
+DATABASE = "library.db"
 
-class Book(db.Model):
-    __tablename__ = "books"
-    id = db.Column(db.Integer, primary_key=True)
-    title = db.Column(db.String(100), nullable=False)
-    author = db.Column(db.String(100), nullable=False)
-    genre = db.Column(db.String(100), nullable=False)
-    publication_year = db.Column(db.Integer, nullable=False)
-    isbn = db.Column(db.String(100), unique=True, nullable=False)
-    status = db.Column(db.String(20), nullable=False, default="Available")
-    added_by = db.Column(db.String(100), nullable=False)
+def get_db_connection():
+    conn = sqlite3.connect(DATABASE)
+    conn.row_factory = sqlite3.Row
+    return conn
 
 def add_book(title, author, genre, publication_year, isbn, added_by):
     """Add a new book to the database."""
     try:
-        if Book.query.filter_by(isbn=isbn).first():
-            print("Error: Book with ISBN already exists.")
-            return False
-        
-        new_book = Book(
-            title=title,
-            author=author,
-            genre=genre,
-            publication_year=int(publication_year),
-            isbn=isbn,
-            added_by=added_by
-        )
-        db.session.add(new_book)
-        db.session.commit()
+        with get_db_connection() as conn:
+            conn.execute(
+                "INSERT INTO books (title, author, genre, publication_year, isbn, added_by) VALUES (?, ?, ?, ?, ?, ?)",
+                (title, author, genre, publication_year, isbn, added_by),
+            )
         print("Book added successfully!")
         return True
-    except Exception as e:
-        print(f"Error adding book: {e}")
-        db.session.rollback()
+    except sqlite3.IntegrityError:
+        print("Error: Book with ISBN already exists.")
         return False
 
 def get_all_books():
     """Retrieve all books from the database."""
-    try:
-        return Book.query.all()
-    except Exception as e:
-        print(f"Error retrieving books: {e}")
-        return []
+    with get_db_connection() as conn:
+        return conn.execute("SELECT * FROM books").fetchall()
 
 def delete_book(book_id):
     """Delete a book from the database by its ID."""
     try:
-        book = Book.query.get(book_id)
-        if book:
-            db.session.delete(book)
-            db.session.commit()
-            print("Book deleted successfully!")
-            return True
-        print("Error: Book not found.")
-        return False
+        with get_db_connection() as conn:
+            conn.execute("DELETE FROM books WHERE id = ?", (book_id,))
+        print("Book deleted successfully!")
+        return True
     except Exception as e:
         print(f"Error deleting book: {e}")
-        db.session.rollback()
         return False
 
 def take_book(book_id):
     """Mark a book as 'Taken' if it is available."""
     try:
-        book = Book.query.get(book_id)
-        if book and book.status == "Available":
-            book.status = "Taken"
-            db.session.commit()
-            print("Book taken successfully!")
-            return True
-        print("Error: Book is not available.")
-        return False
+        with get_db_connection() as conn:
+            book = conn.execute("SELECT * FROM books WHERE id = ?", (book_id,)).fetchone()
+            if book and book["status"] == "Available":
+                conn.execute("UPDATE books SET status = 'Taken' WHERE id = ?", (book_id,))
+                print("Book taken successfully!")
+                return True
+            print("Error: Book is not available.")
+            return False
     except Exception as e:
         print(f"Error taking book: {e}")
-        db.session.rollback()
+        return False
+
+def unlock_book(book_id):
+    """Unlock a book by setting its status back to 'Available'."""
+    try:
+        with get_db_connection() as conn:
+            book = conn.execute("SELECT * FROM books WHERE id = ?", (book_id,)).fetchone()
+            if book and book["status"] == "Taken":
+                conn.execute("UPDATE books SET status = 'Available' WHERE id = ?", (book_id,))
+                print("Book unlocked successfully!")
+                return True
+            print("Error: Book is already available.")
+            return False
+    except Exception as e:
+        print(f"Error unlocking book: {e}")
         return False
