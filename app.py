@@ -72,14 +72,21 @@ def register():
         if User.query.filter_by(username=username).first():
             flash("Username already exists!", "danger")
             return redirect(url_for("register"))
+        if User.query.filter_by(email=email).first():
+            flash("Email already exists!", "danger")
+            return redirect(url_for("register"))
+        try:
+            hashed_password = generate_password_hash(password, method="pbkdf2:sha256")
+            new_user = User(username=username, email=email, password=hashed_password, role=role)
+            db.session.add(new_user)
+            db.session.commit()
 
-        hashed_password = generate_password_hash(password, method="pbkdf2:sha256")
-        new_user = User(username=username, email=email, password=hashed_password, role=role)
-        db.session.add(new_user)
-        db.session.commit()
-
-        flash("Registration successful! Please log in.", "success")
-        return redirect(url_for("login"))
+            flash("Registration successful! Please log in.", "success")
+            return redirect(url_for("login"))
+        except Exception as e:
+            db.session.rollback()
+            flash("An error occurred during registration. Please try again.", "danger")
+            return redirect(url_for("register"))
 
     return render_template("register.html")
 

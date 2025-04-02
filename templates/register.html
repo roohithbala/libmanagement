@@ -37,7 +37,6 @@
   <div class="register-container">
     <h2 class="text-center mb-4">Register</h2>
 
- 
     {% with messages = get_flashed_messages(with_categories=True) %}
       {% if messages %}
         {% for category, message in messages %}
@@ -74,7 +73,6 @@
       <button type="submit" class="btn btn-success w-100">Register</button>
     </form>
 
-   
     <div class="text-center mt-3">
       <p class="text-muted">Already have an account? <a href="{{ url_for('login') }}">Login here</a>.</p>
     </div>
