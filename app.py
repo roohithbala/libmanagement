@@ -1,6 +1,11 @@
 import sqlite3
+import requests
 from flask import Flask, render_template, request, redirect, url_for, session, flash
 from werkzeug.security import generate_password_hash, check_password_hash
+from datetime import datetime
+from flask import jsonify
+
+from book import update_book_location, borrow_book, return_book, get_book_history, add_book, update_book, delete_book, unlock_book
 
 app = Flask(__name__)
 app.secret_key = "supersecretkey"
@@ -15,27 +20,38 @@ def get_db_connection():
 # Initialize the database
 def init_db():
     with get_db_connection() as conn:
-        conn.executescript("""
-        CREATE TABLE IF NOT EXISTS users (
+        # Create the 'book_history' table
+        conn.execute("""
+        CREATE TABLE IF NOT EXISTS book_history (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
-            username TEXT UNIQUE NOT NULL,
-            email TEXT UNIQUE NOT NULL,
-            password TEXT NOT NULL,
-            role TEXT NOT NULL DEFAULT 'user'
-        );
-
-        CREATE TABLE IF NOT EXISTS books (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            title TEXT NOT NULL,
-            author TEXT NOT NULL,
-            genre TEXT NOT NULL,
-            publication_year INTEGER NOT NULL,
-            isbn TEXT UNIQUE NOT NULL,
-            status TEXT NOT NULL DEFAULT 'Available',
-            added_by TEXT NOT NULL
+            book_id INTEGER NOT NULL,
+            user_id INTEGER NOT NULL,
+            borrowed_at DATETIME NOT NULL,
+            returned_at DATETIME DEFAULT NULL,
+            penalty INTEGER DEFAULT 0,
+            FOREIGN KEY (book_id) REFERENCES books (id),
+            FOREIGN KEY (user_id) REFERENCES users (id)
         );
         """)
 init_db()
+
+def fetch_book_cover(isbn):
+    """Fetch the book cover image URL using Open Library API."""
+    try:
+        # Open Library API URL for book covers
+        cover_url = f"https://covers.openlibrary.org/b/isbn/{isbn}-L.jpg"
+        
+        # Check if the cover image exists
+        response = requests.get(cover_url)
+        if response.status_code == 200:
+            return cover_url  # Return the cover image URL
+        else:
+            # Return a placeholder image if no cover is found
+            return "https://via.placeholder.com/150?text=No+Cover+Available"
+    except Exception as e:
+        print(f"Error fetching book cover: {e}")
+        # Return a placeholder image in case of an error
+        return "https://via.placeholder.com/150?text=Error"
 
 @app.route("/")
 def home():
@@ -146,17 +162,10 @@ def add_book_route():
         isbn = request.form.get("isbn")
         added_by = session.get("username")
 
-        try:
-            with get_db_connection() as conn:
-                conn.execute(
-                    "INSERT INTO books (title, author, genre, publication_year, isbn, added_by) VALUES (?, ?, ?, ?, ?, ?)",
-                    (title, author, genre, publication_year, isbn, added_by),
-                )
+        if add_book(title, author, genre, publication_year, isbn, added_by):
             flash("Book added successfully!", "success")
-        except sqlite3.IntegrityError:
+        else:
             flash("Error: Book with the same ISBN already exists.", "danger")
-        except Exception as e:
-            flash(f"An error occurred: {e}", "danger")
 
         return redirect(url_for("admin_dashboard"))
 
@@ -183,18 +192,12 @@ def update_book_route(book_id):
         publication_year = request.form.get("publication_year")
         isbn = request.form.get("isbn")
 
-        try:
-            with get_db_connection() as conn:
-                conn.execute(
-                    "UPDATE books SET title = ?, author = ?, genre = ?, publication_year = ?, isbn = ? WHERE id = ?",
-                    (title, author, genre, publication_year, isbn, book_id),
-                )
+        if update_book(book_id, title, author, genre, publication_year, isbn):
             flash("Book updated successfully!", "success")
-            return redirect(url_for("admin_dashboard"))
-        except sqlite3.IntegrityError:
+        else:
             flash("Error: Book with the same ISBN already exists.", "danger")
-        except Exception as e:
-            flash(f"An error occurred: {e}", "danger")
+
+        return redirect(url_for("admin_dashboard"))
 
     return render_template("update_book.html", book=book)
 
@@ -205,20 +208,18 @@ def delete_book_route(book_id):
         flash("Access Denied! Only Admins and Librarians can delete books.", "danger")
         return redirect(url_for("home"))
 
-    try:
-        with get_db_connection() as conn:
-            conn.execute("DELETE FROM books WHERE id = ?", (book_id,))
+    if delete_book(book_id):
         flash("Book deleted successfully!", "success")
-    except Exception as e:
-        flash(f"An error occurred while deleting the book: {e}", "danger")
+    else:
+        flash("Failed to delete book.", "danger")
 
-    return redirect(url_for("librarian_dashboard") if session.get("role") == "librarian" else url_for("admin_dashboard"))
+    return redirect(url_for("admin_dashboard"))
 
 @app.route("/take_book/<int:book_id>", methods=["POST"])
 def take_book_route(book_id):
     """Route to allow a user to take a book."""
     if "user_id" not in session or session.get("role") != "user":
-        flash("Access Denied! Only Users can take books.", "danger")
+        flash("Access Denied! Only Users can borrow books.", "danger")
         return redirect(url_for("home"))
 
     with get_db_connection() as conn:
@@ -228,41 +229,119 @@ def take_book_route(book_id):
             flash("Book not found!", "danger")
             return redirect(url_for("user_dashboard"))
 
-        if book["status"] == "Available":
-            try:
-                conn.execute("UPDATE books SET status = 'Taken' WHERE id = ?", (book_id,))
-                flash("Book taken successfully!", "success")
-            except Exception as e:
-                flash(f"An error occurred while taking the book: {e}", "danger")
-        else:
-            flash("Book is not available.", "danger")
+    if borrow_book(book_id, session["user_id"]):
+        flash("Book borrowed successfully! Return within 5 days.", "success")
+    else:
+        flash("Failed to borrow book.", "danger")
 
     return redirect(url_for("user_dashboard"))
 
 @app.route("/unlock_book/<int:book_id>", methods=["POST"])
 def unlock_book_route(book_id):
-    """Route to unlock a book by setting its status back to 'Available'."""
+    """Route to unlock a book."""
     if "user_id" not in session or session.get("role") not in ["admin", "librarian"]:
         flash("Access Denied! Only Admins and Librarians can unlock books.", "danger")
         return redirect(url_for("home"))
 
-    with get_db_connection() as conn:
-        book = conn.execute("SELECT * FROM books WHERE id = ?", (book_id,)).fetchone()
-
-        if not book:
-            flash("Book not found!", "danger")
-            return redirect(url_for("admin_dashboard"))
-
-        if book["status"] == "Taken":
-            try:
-                conn.execute("UPDATE books SET status = 'Available' WHERE id = ?", (book_id,))
-                flash("Book unlocked successfully!", "success")
-            except Exception as e:
-                flash(f"An error occurred while unlocking the book: {e}", "danger")
-        else:
-            flash("Book is already available.", "info")
+    if unlock_book(book_id):
+        flash("Book unlocked successfully!", "success")
+    else:
+        flash("Failed to unlock book.", "danger")
 
     return redirect(url_for("admin_dashboard") if session.get("role") == "admin" else url_for("librarian_dashboard"))
+
+@app.route("/profile", methods=["GET", "POST"])
+def profile():
+    if "user_id" not in session:
+        flash("Please log in to access your profile.", "danger")
+        return redirect(url_for("login"))
+
+    with get_db_connection() as conn:
+        user = conn.execute("SELECT * FROM users WHERE id = ?", (session["user_id"],)).fetchone()
+
+    if request.method == "POST":
+        username = request.form["username"]
+        email = request.form["email"]
+        password = request.form["password"]
+
+        try:
+            with get_db_connection() as conn:
+                if password:
+                    hashed_password = generate_password_hash(password, method="pbkdf2:sha256")
+                    conn.execute(
+                        "UPDATE users SET username = ?, email = ?, password = ? WHERE id = ?",
+                        (username, email, hashed_password, session["user_id"]),
+                    )
+                else:
+                    conn.execute(
+                        "UPDATE users SET username = ?, email = ? WHERE id = ?",
+                        (username, email, session["user_id"]),
+                    )
+                flash("Profile updated successfully!", "success")
+        except sqlite3.IntegrityError:
+            flash("Username or email already exists!", "danger")
+        except Exception as e:
+            flash(f"An error occurred: {e}", "danger")
+
+        return redirect(url_for("profile"))
+
+    return render_template("profile.html", user=user)
+
+@app.route("/book/<int:book_id>")
+def view_book(book_id):
+    """View book details and history."""
+    with get_db_connection() as conn:
+        book = conn.execute("""
+            SELECT b.*, u.username AS borrowed_by_username
+            FROM books b
+            LEFT JOIN users u ON b.borrowed_by = u.id
+            WHERE b.id = ?
+        """, (book_id,)).fetchone()
+        history = get_book_history(book_id)
+    if not book:
+        flash("Book not found!", "danger")
+        return redirect(url_for("home"))
+    return render_template("book_details.html", book=book, history=history)
+
+@app.route("/update_location/<int:book_id>", methods=["POST"])
+def update_location(book_id):
+    """Update the location of a book."""
+    if "user_id" not in session or session.get("role") not in ["admin", "librarian"]:
+        flash("Access Denied!", "danger")
+        return redirect(url_for("home"))
+    location = request.form.get("location")
+    if update_book_location(book_id, location):
+        flash("Book location updated successfully!", "success")
+    else:
+        flash("Failed to update book location.", "danger")
+    return redirect(url_for("view_book", book_id=book_id))
+
+@app.route("/borrow/<int:book_id>", methods=["POST"])
+def borrow_book_route(book_id):
+    """Borrow a book."""
+    if "user_id" not in session or session.get("role") != "user":
+        flash("Access Denied!", "danger")
+        return redirect(url_for("home"))
+    if borrow_book(book_id, session["user_id"]):
+        flash("Book borrowed successfully! Return within 5 days.", "success")
+    else:
+        flash("Failed to borrow book.", "danger")
+    return redirect(url_for("user_dashboard"))
+
+@app.route("/return/<int:book_id>", methods=["POST"])
+def return_book_route(book_id):
+    """Return a book."""
+    if "user_id" not in session or session.get("role") != "user":
+        flash("Access Denied!", "danger")
+        return redirect(url_for("home"))
+
+    penalty = return_book(book_id, session["user_id"])
+    if penalty is not None:
+        flash(f"Book returned successfully! Penalty: ${penalty}", "success")
+    else:
+        flash("Failed to return book.", "danger")
+
+    return redirect(url_for("user_dashboard"))
 
 if __name__ == "__main__":
     app.run(debug=True)

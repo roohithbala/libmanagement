@@ -32,6 +32,10 @@
         .btn-take:hover {
             background-color: #2575fc;
         }
+        .book-cover {
+            width: 50px;
+            height: auto;
+        }
     </style>
 </head>
 <body class="container mt-5">
@@ -60,47 +64,38 @@
     <!-- Available Books Section -->
     <div class="card shadow-sm p-4">
         <h4 class="mb-3">Available Books</h4>
-        <table class="table table-bordered table-hover">
-            <thead>
-                <tr>
-                    <th>ID</th>
-                    <th>Title</th>
-                    <th>Author</th>
-                    <th>Genre</th>
-                    <th>Year</th>
-                    <th>ISBN</th>
-                    <th>Status</th>
-                    <th>Actions</th>
-                </tr>
-            </thead>
-            <tbody>
-                {% for book in books %}
-                <tr>
-                    <td>{{ book.id }}</td>
-                    <td>{{ book.title }}</td>
-                    <td>{{ book.author }}</td>
-                    <td>{{ book.genre }}</td>
-                    <td>{{ book.publication_year }}</td>
-                    <td>{{ book.isbn }}</td>
-                    <td>
-                        <span class="badge {% if book.status == 'Available' %}bg-success{% else %}bg-danger{% endif %}">
-                            {{ book.status }}
-                        </span>
-                    </td>
-                    <td>
-                        {% if book.status == 'Available' %}
-                            <form method="POST" action="{{ url_for('take_book_route', book_id=book.id) }}" class="d-inline">
-                                <button type="submit" class="btn btn-take btn-sm">Take Book</button>
-                            </form>
+        <div class="row">
+            {% for book in books %}
+            <div class="col-md-4 mb-4">
+                <div class="card">
+                    <img src="{{ book.cover_url }}" class="card-img-top" alt="Book Cover">
+                    <div class="card-body">
+                        <h5 class="card-title">
+                            <a href="{{ url_for('view_book', book_id=book.id) }}">{{ book.title }}</a>
+                        </h5>
+                        <p class="card-text">Author: {{ book.author }}</p>
+                        <p class="card-text">Genre: {{ book.genre }}</p>
+                        <p class="card-text">ISBN: {{ book.isbn }}</p>
+                        {% if book.status == "Taken" and book.borrowed_by == session["user_id"] %}
+                        <form method="POST" action="{{ url_for('return_book_route', book_id=book.id) }}">
+                            <button type="submit" class="btn btn-warning">Return</button>
+                        </form>
                         {% else %}
-                            <button class="btn btn-secondary btn-sm" disabled>Unavailable</button>
+                        <form method="POST" action="{{ url_for('take_book_route', book_id=book.id) }}">
+                            <button type="submit" class="btn btn-primary">Borrow</button>
+                        </form>
                         {% endif %}
-                    </td>
-                </tr>
-                {% endfor %}
-            </tbody>
-        </table>
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
     </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+
+</body>
+</html>
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 

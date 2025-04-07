@@ -1,6 +1,9 @@
 import sqlite3
+from datetime import datetime, timedelta
+from flask import Flask, render_template, redirect, url_for, flash
 
 DATABASE = "library.db"
+app = Flask(__name__)
 
 def get_db_connection():
     conn = sqlite3.connect(DATABASE)
@@ -21,10 +24,19 @@ def add_book(title, author, genre, publication_year, isbn, added_by):
         print("Error: Book with ISBN already exists.")
         return False
 
-def get_all_books():
-    """Retrieve all books from the database."""
-    with get_db_connection() as conn:
-        return conn.execute("SELECT * FROM books").fetchall()
+def update_book(book_id, title, author, genre, publication_year, isbn):
+    """Update an existing book."""
+    try:
+        with get_db_connection() as conn:
+            conn.execute(
+                "UPDATE books SET title = ?, author = ?, genre = ?, publication_year = ?, isbn = ? WHERE id = ?",
+                (title, author, genre, publication_year, isbn, book_id),
+            )
+        print("Book updated successfully!")
+        return True
+    except sqlite3.IntegrityError:
+        print("Error: Book with ISBN already exists.")
+        return False
 
 def delete_book(book_id):
     """Delete a book from the database by its ID."""
@@ -37,20 +49,74 @@ def delete_book(book_id):
         print(f"Error deleting book: {e}")
         return False
 
-def take_book(book_id):
-    """Mark a book as 'Taken' if it is available."""
+def update_book_location(book_id, location):
+    """Update the location of a book."""
     try:
         with get_db_connection() as conn:
+            conn.execute("UPDATE books SET location = ? WHERE id = ?", (location, book_id))
+        print("Book location updated successfully!")
+        return True
+    except Exception as e:
+        print(f"Error updating book location: {e}")
+        return False
+
+def borrow_book(book_id, user_id):
+    """Borrow a book and log the borrowing history."""
+    try:
+        with get_db_connection() as conn:
+            # Fetch book details
             book = conn.execute("SELECT * FROM books WHERE id = ?", (book_id,)).fetchone()
             if book and book["status"] == "Available":
-                conn.execute("UPDATE books SET status = 'Taken' WHERE id = ?", (book_id,))
-                print("Book taken successfully!")
+                due_date = datetime.now() + timedelta(days=5)
+                conn.execute(
+                    "UPDATE books SET status = 'Taken', borrowed_by = ?, due_date = ? WHERE id = ?",
+                    (user_id, due_date.strftime("%Y-%m-%d"), book_id),
+                )
+                conn.execute(
+                    "INSERT INTO book_history (book_id, user_id, borrowed_at) VALUES (?, ?, ?)",
+                    (book_id, user_id, datetime.now()),
+                )
+                print("Book borrowed successfully!")
                 return True
             print("Error: Book is not available.")
             return False
     except Exception as e:
-        print(f"Error taking book: {e}")
+        print(f"Error borrowing book: {e}")
         return False
+
+def return_book(book_id, user_id):
+    """Return a book, calculate penalties, and update history."""
+    try:
+        with get_db_connection() as conn:
+            book = conn.execute("SELECT * FROM books WHERE id = ?", (book_id,)).fetchone()
+            if book and book["status"] == "Taken" and book["borrowed_by"] == user_id:
+                due_date = datetime.strptime(book["due_date"], "%Y-%m-%d")
+                today = datetime.now()
+                penalty = max(0, (today - due_date).days * 10)  # $10 per day penalty
+                conn.execute(
+                    "UPDATE books SET status = 'Available', borrowed_by = NULL, due_date = NULL, penalty = ? WHERE id = ?",
+                    (penalty, book_id),
+                )
+                conn.execute(
+                    "UPDATE book_history SET returned_at = ?, penalty = ? WHERE book_id = ? AND user_id = ? AND returned_at IS NULL",
+                    (datetime.now(), penalty, book_id, user_id),
+                )
+                print(f"Book returned successfully! Penalty: ${penalty}")
+                return penalty
+            print("Error: Book is not currently borrowed by this user.")
+            return None
+    except Exception as e:
+        print(f"Error returning book: {e}")
+        return None
+
+def get_book_history(book_id):
+    """Retrieve the borrowing history of a book."""
+    with get_db_connection() as conn:
+        history = conn.execute(
+            "SELECT bh.*, u.username FROM book_history bh JOIN users u ON bh.user_id = u.id WHERE bh.book_id = ? ORDER BY bh.borrowed_at DESC",
+            (book_id,),
+        ).fetchall()
+    return history
 
 def unlock_book(book_id):
     """Unlock a book by setting its status back to 'Available'."""
@@ -58,7 +124,7 @@ def unlock_book(book_id):
         with get_db_connection() as conn:
             book = conn.execute("SELECT * FROM books WHERE id = ?", (book_id,)).fetchone()
             if book and book["status"] == "Taken":
-                conn.execute("UPDATE books SET status = 'Available' WHERE id = ?", (book_id,))
+                conn.execute("UPDATE books SET status = 'Available', borrowed_by = NULL, due_date = NULL WHERE id = ?", (book_id,))
                 print("Book unlocked successfully!")
                 return True
             print("Error: Book is already available.")
@@ -66,3 +132,19 @@ def unlock_book(book_id):
     except Exception as e:
         print(f"Error unlocking book: {e}")
         return False
+
+@app.route("/book/<int:book_id>")
+def view_book(book_id):
+    """View book details and history."""
+    with get_db_connection() as conn:
+        book = conn.execute("""
+            SELECT b.*, u.username AS borrowed_by_username
+            FROM books b
+            LEFT JOIN users u ON b.borrowed_by = u.id
+            WHERE b.id = ?
+        """, (book_id,)).fetchone()
+        history = get_book_history(book_id)
+    if not book:
+        flash("Book not found!", "danger")
+        return redirect(url_for("home"))
+    return render_template("book_details.html", book=book, history=history)
