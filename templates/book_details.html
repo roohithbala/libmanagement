@@ -27,7 +27,7 @@
         {% endif %}
 
         {% if session.get("role") in ["admin", "librarian"] %}
-        <form method="POST" action="{{ url_for('update_location', book_id=book.id) }}">
+        <form method="POST" action="{{ url_for('update_location', book_id=book.id) }}" class="mt-3">
             <div class="mb-3">
                 <label for="location" class="form-label">Update Location</label>
                 <input type="text" id="location" name="location" class="form-control" value="{{ book.location }}" required>
@@ -54,6 +54,26 @@
                 <td>{{ entry.borrowed_at }}</td>
                 <td>{{ entry.returned_at or "Not Returned" }}</td>
                 <td>${{ entry.penalty }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+
+    <h4 class="mt-5">Modification Log</h4>
+    <table class="table table-bordered">
+        <thead>
+            <tr>
+                <th>Modified By</th>
+                <th>Modification</th>
+                <th>Date & Time</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for mod in modifications %}
+            <tr>
+                <td>{{ mod.modified_by_username or "N/A" }}</td>
+                <td>{{ mod.modification }}</td>
+                <td>{{ mod.modified_at }}</td>
             </tr>
             {% endfor %}
         </tbody>
