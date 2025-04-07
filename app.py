@@ -18,7 +18,26 @@ def get_db_connection():
 
 def init_db():
     with get_db_connection() as conn:
-        # Create book_history table if it doesn't exist.
+        # Uncomment the line below to drop the books table if a fresh start is needed
+        # conn.execute("DROP TABLE IF EXISTS books;")
+        conn.execute("""
+        CREATE TABLE IF NOT EXISTS books (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            title TEXT NOT NULL,
+            author TEXT NOT NULL,
+            category TEXT NOT NULL,
+            publication_year INTEGER,
+            isbn TEXT UNIQUE NOT NULL,
+            added_by TEXT,
+            status TEXT NOT NULL DEFAULT 'Available',
+            main_area TEXT,
+            rack_no TEXT,
+            column_no TEXT,
+            borrowed_by INTEGER,
+            due_date TEXT,
+            penalty INTEGER DEFAULT 0
+        );
+        """)
         conn.execute("""
         CREATE TABLE IF NOT EXISTS book_history (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -31,7 +50,6 @@ def init_db():
             FOREIGN KEY (user_id) REFERENCES users(id)
         );
         """)
-        # Create book_modifications table
         conn.execute("""
         CREATE TABLE IF NOT EXISTS book_modifications (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -43,6 +61,8 @@ def init_db():
             FOREIGN KEY (modified_by) REFERENCES users(id)
         );
         """)
+        conn.commit()
+
 init_db()
 
 def fetch_book_cover(isbn):
@@ -65,6 +85,8 @@ def home():
     book_list = []
     for book in books:
         book_dict = dict(book)
+        # Build full location string from columns
+        book_dict["location"] = f"{book_dict.get('main_area', '')} - Rack {book_dict.get('rack_no', '')} Column {book_dict.get('column_no', '')}"
         book_dict["cover_url"] = fetch_book_cover(book_dict.get("isbn", ""))
         book_list.append(book_dict)
     return render_template("index.html", books=book_list)
@@ -79,8 +101,11 @@ def register():
         hashed_password = generate_password_hash(password, method="pbkdf2:sha256")
         try:
             with get_db_connection() as conn:
-                conn.execute("INSERT INTO users (username, email, password, role) VALUES (?, ?, ?, ?)",
-                             (username, email, hashed_password, role))
+                conn.execute(
+                    "INSERT INTO users (username, email, password, role) VALUES (?, ?, ?, ?)",
+                    (username, email, hashed_password, role)
+                )
+                conn.commit()
             flash("Registration successful! Please log in.", "success")
             return redirect(url_for("login"))
         except sqlite3.IntegrityError:
@@ -148,11 +173,14 @@ def add_book_route():
     if request.method == "POST":
         title = request.form.get("title")
         author = request.form.get("author")
-        genre = request.form.get("genre")
+        category = request.form.get("category")
         publication_year = request.form.get("publication_year")
         isbn = request.form.get("isbn")
         added_by = session.get("username")
-        if add_book(title, author, genre, publication_year, isbn, added_by):
+        main_area = request.form.get("main_area")
+        rack_no = request.form.get("rack_no")
+        column_no = request.form.get("column_no")
+        if add_book(title, author, category, publication_year, isbn, added_by, main_area, rack_no, column_no):
             flash("Book added successfully!", "success")
         else:
             flash("Error: Book with the same ISBN already exists.", "danger")
@@ -172,10 +200,10 @@ def update_book_route(book_id):
     if request.method == "POST":
         title = request.form.get("title")
         author = request.form.get("author")
-        genre = request.form.get("genre")
+        category = request.form.get("category")
         publication_year = request.form.get("publication_year")
         isbn = request.form.get("isbn")
-        if update_book(book_id, title, author, genre, publication_year, isbn, session["user_id"]):
+        if update_book(book_id, title, author, category, publication_year, isbn, session["user_id"]):
             flash("Book updated successfully!", "success")
         else:
             flash("Error: Book with the same ISBN already exists.", "danger")
@@ -213,7 +241,7 @@ def return_book_route(book_id):
     if penalty is not None:
         flash(f"Book returned successfully! Penalty: ${penalty}", "success")
     else:
-        flash("Failed to return book. Please check that the book is borrowed and has a valid due date.", "danger")
+        flash("Failed to return book.", "danger")
     return redirect(url_for("user_dashboard"))
 
 @app.route("/unlock_book/<int:book_id>", methods=["POST"])
@@ -245,11 +273,12 @@ def profile():
             with get_db_connection() as conn:
                 if password:
                     hashed = generate_password_hash(password, method="pbkdf2:sha256")
-                    conn.execute("UPDATE users SET username=?, email=?, password=? WHERE id=?", 
+                    conn.execute("UPDATE users SET username=?, email=?, password=? WHERE id=?",
                                  (username, email, hashed, session["user_id"]))
                 else:
-                    conn.execute("UPDATE users SET username=?, email=? WHERE id=?", 
+                    conn.execute("UPDATE users SET username=?, email=? WHERE id=?",
                                  (username, email, session["user_id"]))
+                conn.commit()
             flash("Profile updated successfully!", "success")
         except sqlite3.IntegrityError:
             flash("Username or email already exists!", "danger")
@@ -278,6 +307,9 @@ def view_book(book_id):
     if not book:
         flash("Book not found!", "danger")
         return redirect(url_for("home"))
+    # Construct complete location info
+    book = dict(book)
+    book["location"] = f"{book.get('main_area', '')} - Rack {book.get('rack_no', '')} Column {book.get('column_no', '')}"
     return render_template("book_details.html", book=book, history=history, modifications=modifications)
 
 @app.route("/update_location/<int:book_id>", methods=["POST"])
@@ -285,12 +317,37 @@ def update_location(book_id):
     if "user_id" not in session or session.get("role") not in ["admin", "librarian"]:
         flash("Access Denied!", "danger")
         return redirect(url_for("home"))
-    location = request.form.get("location")
-    if update_book_location(book_id, location, session["user_id"]):
+    main_area = request.form.get("main_area")
+    rack_no = request.form.get("rack_no")
+    column_no = request.form.get("column_no")
+    if update_book_location(book_id, main_area, rack_no, column_no, session["user_id"]):
         flash("Book location updated successfully!", "success")
     else:
         flash("Failed to update book location.", "danger")
     return redirect(url_for("view_book", book_id=book_id))
+
+@app.route("/search")
+def search():
+    query = request.args.get("q", "")
+    category = request.args.get("category", "")
+    with get_db_connection() as conn:
+        if category:
+            books = conn.execute(
+                "SELECT * FROM books WHERE (title LIKE ? OR author LIKE ?) AND category = ?",
+                (f"%{query}%", f"%{query}%", category)
+            ).fetchall()
+        else:
+            books = conn.execute(
+                "SELECT * FROM books WHERE title LIKE ? OR author LIKE ?",
+                (f"%{query}%", f"%{query}%")
+            ).fetchall()
+    book_list = []
+    for book in books:
+        book_dict = dict(book)
+        book_dict["location"] = f"{book_dict.get('main_area', '')} - Rack {book_dict.get('rack_no', '')} Column {book_dict.get('column_no', '')}"
+        book_dict["cover_url"] = fetch_book_cover(book_dict.get("isbn", ""))
+        book_list.append(book_dict)
+    return render_template("index.html", books=book_list)
 
 if __name__ == "__main__":
     app.run(debug=True)

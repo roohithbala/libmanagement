@@ -68,8 +68,9 @@
                                 </h5>
                                 <p class="card-text">Author: {{ book.author }}</p>
                                 <p class="card-text">ISBN: {{ book.isbn }}</p>
+                                <p class="card-text"><small>{{ book.location }}</small></p>
                                 <form method="POST" action="{{ url_for('take_book_route', book_id=book.id) }}">
-                                    <button type="submit" class="btn btn-take">Borrow</button>
+                                    <button type="submit" class="btn btn-primary">Borrow</button>
                                 </form>
                             </div>
                         </div>
@@ -78,7 +79,7 @@
             {% endfor %}
             {% if available_count == 0 %}
                 <div class="col-12">
-                    <p class="text-muted">No available books at the moment.</p>
+                    <p class="text-muted">No available books.</p>
                 </div>
             {% endif %}
         </div>

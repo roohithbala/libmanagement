@@ -69,11 +69,10 @@
                     <th>ID</th>
                     <th>Title</th>
                     <th>Author</th>
-                    <th>Publication Year</th>
+                    <th>Year</th>
                     <th>ISBN</th>
                     <th>Status</th>
-                    <th>Borrowed By</th>
-                    <th>Mod Log</th>
+                    <th>Location</th>
                     <th>Actions</th>
                 </tr>
             </thead>
@@ -90,20 +89,13 @@
                             {{ book.status }}
                         </span>
                     </td>
-                    <td>{{ book.borrowed_by or "N/A" }}</td>
+                    <td>{{ book.main_area }} - Rack {{ book.rack_no }} Col {{ book.column_no }}</td>
                     <td>
-                        <a href="{{ url_for('view_book', book_id=book.id) }}" class="btn btn-info btn-sm">View Log</a>
-                    </td>
-                    <td>
+                        <a href="{{ url_for('view_book', book_id=book.id) }}" class="btn btn-info btn-sm">View</a>
                         <a href="{{ url_for('update_book_route', book_id=book.id) }}" class="btn btn-warning btn-sm">Update</a>
                         <form method="POST" action="{{ url_for('delete_book_route', book_id=book.id) }}" class="d-inline">
                             <button type="submit" class="btn btn-danger btn-sm">Delete</button>
                         </form>
-                        {% if book.status == 'Taken' %}
-                        <form method="POST" action="{{ url_for('unlock_book_route', book_id=book.id) }}" class="d-inline">
-                            <button type="submit" class="btn btn-secondary btn-sm">Unlock</button>
-                        </form>
-                        {% endif %}
                     </td>
                 </tr>
                 {% endfor %}

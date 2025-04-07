@@ -10,13 +10,13 @@ def get_db_connection():
     conn.row_factory = sqlite3.Row
     return conn
 
-def add_book(title, author, genre, publication_year, isbn, added_by):
-    """Add a new book to the database."""
+def add_book(title, author, category, publication_year, isbn, added_by, main_area, rack_no, column_no):
+    """Add a new book with extended location details and category."""
     try:
         with get_db_connection() as conn:
             conn.execute(
-                "INSERT INTO books (title, author, genre, publication_year, isbn, added_by, status, location) VALUES (?, ?, ?, ?, ?, ?, 'Available', 'Library')",
-                (title, author, genre, publication_year, isbn, added_by)
+                "INSERT INTO books (title, author, category, publication_year, isbn, added_by, status, main_area, rack_no, column_no) VALUES (?, ?, ?, ?, ?, ?, 'Available', ?, ?, ?)",
+                (title, author, category, publication_year, isbn, added_by, main_area, rack_no, column_no)
             )
         print("Book added successfully!")
         return True
@@ -24,13 +24,13 @@ def add_book(title, author, genre, publication_year, isbn, added_by):
         print("Error: Book with ISBN already exists.")
         return False
 
-def update_book(book_id, title, author, genre, publication_year, isbn, modified_by):
+def update_book(book_id, title, author, category, publication_year, isbn, modified_by):
     """Update an existing book and record modification details."""
     try:
         with get_db_connection() as conn:
             conn.execute(
-                "UPDATE books SET title=?, author=?, genre=?, publication_year=?, isbn=? WHERE id=?",
-                (title, author, genre, publication_year, isbn, book_id)
+                "UPDATE books SET title=?, author=?, category=?, publication_year=?, isbn=? WHERE id=?",
+                (title, author, category, publication_year, isbn, book_id)
             )
             record_book_modification(book_id, modified_by, "Book details updated")
         print("Book updated successfully!")
@@ -50,13 +50,16 @@ def delete_book(book_id):
         print(f"Error deleting book: {e}")
         return False
 
-def update_book_location(book_id, location, modified_by=None):
-    """Update the location of a book and record modification if provided."""
+def update_book_location(book_id, main_area, rack_no, column_no, modified_by=None):
+    """Update the location of a book and record the modification if provided."""
     try:
         with get_db_connection() as conn:
-            conn.execute("UPDATE books SET location=? WHERE id=?", (location, book_id))
+            conn.execute(
+                "UPDATE books SET main_area=?, rack_no=?, column_no=? WHERE id=?",
+                (main_area, rack_no, column_no, book_id)
+            )
             if modified_by:
-                record_book_modification(book_id, modified_by, f"Location updated to '{location}'")
+                record_book_modification(book_id, modified_by, f"Location updated to {main_area}, Rack {rack_no}, Column {column_no}")
         print("Book location updated successfully!")
         return True
     except Exception as e:
@@ -87,34 +90,27 @@ def borrow_book(book_id, user_id):
         return False
 
 def return_book(book_id, user_id):
-    """Return a book, calculate penalties, and update history."""
+    """Return a book, calculate penalties (if overdue) and update history.
+       Allows early return with zero penalty."""
     try:
         with get_db_connection() as conn:
             book = conn.execute("SELECT * FROM books WHERE id=?", (book_id,)).fetchone()
             if book is None:
                 print("Error: Book not found.")
                 return None
-
-            # Check the book status and borrower
-            if book["status"] != "Taken" or book["borrowed_by"] != user_id:
+            if book["status"] != "Taken" or int(book["borrowed_by"]) != int(user_id):
                 print("Error: Book is not currently borrowed by this user.")
                 return None
-
-            # Ensure due_date is valid
             if not book["due_date"]:
                 print("Error: Due date is missing.")
                 return None
-
             try:
                 due_date = datetime.strptime(book["due_date"], "%Y-%m-%d")
             except Exception as dt_err:
                 print(f"Error parsing due date: {dt_err}")
                 return None
-
             today = datetime.now()
-            penalty = max(0, (today - due_date).days * 10)  # $10 per day penalty
-
-            # Update the book record
+            penalty = 0 if today <= due_date else (today - due_date).days * 10
             conn.execute(
                 "UPDATE books SET status='Available', borrowed_by=NULL, due_date=NULL, penalty=? WHERE id=?",
                 (penalty, book_id)
@@ -123,6 +119,7 @@ def return_book(book_id, user_id):
                 "UPDATE book_history SET returned_at=?, penalty=? WHERE book_id=? AND user_id=? AND returned_at IS NULL",
                 (datetime.now(), penalty, book_id, user_id)
             )
+            conn.commit()
             print(f"Book returned successfully! Penalty: ${penalty}")
             return penalty
     except Exception as e:

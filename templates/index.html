@@ -72,8 +72,8 @@
     </nav>
 
     <div class="hero mb-4">
-        <h1>Welcome to the Library Management System</h1>
-        <p>Explore, manage, and enjoy a seamless library experience.</p>
+        <h1>Welcome to Our Library</h1>
+        <p>Manage and explore our collection with ease.</p>
         {% if not session["user_id"] %}
             <a href="{{ url_for('login') }}" class="btn btn-custom btn-lg me-2">Login</a>
             <a href="{{ url_for('register') }}" class="btn btn-light btn-lg">Register</a>
@@ -92,19 +92,27 @@
         {% endif %}
     {% endwith %}
 
-    <div class="card p-4 shadow-sm">
-        <h4 class="text-center mb-4">Explore Our Library</h4>
-        <p class="text-center">Welcome to the Library Management System! Please login or sign up to continue.</p>
-
-        <div class="text-center">
-            {% if session["role"] == "admin" %}
-                <a href="{{ url_for('admin_dashboard') }}" class="btn btn-dark">Admin Dashboard</a>
-            {% elif session["role"] == "librarian" %}
-                <a href="{{ url_for('librarian_dashboard') }}" class="btn btn-dark">Librarian Dashboard</a>
-            {% elif session["role"] == "user" %}
-                <a href="{{ url_for('user_dashboard') }}" class="btn btn-dark">User Dashboard</a>
-            {% endif %}
+    <div class="row">
+        {% for book in books %}
+        <div class="col-md-4 mb-4">
+            <div class="card">
+                <img src="{{ book.cover_url }}" class="card-img-top" alt="Book Cover">
+                <div class="card-body">
+                    <h5 class="card-title">
+                        <a href="{{ url_for('view_book', book_id=book.id) }}">{{ book.title }}</a>
+                    </h5>
+                    <p class="card-text">Author: {{ book.author }}</p>
+                    <p class="card-text">ISBN: {{ book.isbn }}</p>
+                    <p class="card-text"><small class="text-muted">{{ book.location }}</small></p>
+                    {% if book.status == 'Available' %}
+                    <form method="POST" action="{{ url_for('take_book_route', book_id=book.id) }}">
+                        <button type="submit" class="btn btn-primary">Borrow</button>
+                    </form>
+                    {% endif %}
+                </div>
+            </div>
         </div>
+        {% endfor %}
     </div>
 
     <footer class="mt-5 text-center">
