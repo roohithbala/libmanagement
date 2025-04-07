@@ -91,22 +91,40 @@ def return_book(book_id, user_id):
     try:
         with get_db_connection() as conn:
             book = conn.execute("SELECT * FROM books WHERE id=?", (book_id,)).fetchone()
-            if book and book["status"] == "Taken" and book["borrowed_by"] == user_id:
+            if book is None:
+                print("Error: Book not found.")
+                return None
+
+            # Check the book status and borrower
+            if book["status"] != "Taken" or book["borrowed_by"] != user_id:
+                print("Error: Book is not currently borrowed by this user.")
+                return None
+
+            # Ensure due_date is valid
+            if not book["due_date"]:
+                print("Error: Due date is missing.")
+                return None
+
+            try:
                 due_date = datetime.strptime(book["due_date"], "%Y-%m-%d")
-                today = datetime.now()
-                penalty = max(0, (today - due_date).days * 10)  # $10 per day penalty
-                conn.execute(
-                    "UPDATE books SET status='Available', borrowed_by=NULL, due_date=NULL, penalty=? WHERE id=?",
-                    (penalty, book_id)
-                )
-                conn.execute(
-                    "UPDATE book_history SET returned_at=?, penalty=? WHERE book_id=? AND user_id=? AND returned_at IS NULL",
-                    (datetime.now(), penalty, book_id, user_id)
-                )
-                print(f"Book returned successfully! Penalty: ${penalty}")
-                return penalty
-            print("Error: Book is not currently borrowed by this user.")
-            return None
+            except Exception as dt_err:
+                print(f"Error parsing due date: {dt_err}")
+                return None
+
+            today = datetime.now()
+            penalty = max(0, (today - due_date).days * 10)  # $10 per day penalty
+
+            # Update the book record
+            conn.execute(
+                "UPDATE books SET status='Available', borrowed_by=NULL, due_date=NULL, penalty=? WHERE id=?",
+                (penalty, book_id)
+            )
+            conn.execute(
+                "UPDATE book_history SET returned_at=?, penalty=? WHERE book_id=? AND user_id=? AND returned_at IS NULL",
+                (datetime.now(), penalty, book_id, user_id)
+            )
+            print(f"Book returned successfully! Penalty: ${penalty}")
+            return penalty
     except Exception as e:
         print(f"Error returning book: {e}")
         return None

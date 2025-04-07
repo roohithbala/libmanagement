@@ -213,7 +213,7 @@ def return_book_route(book_id):
     if penalty is not None:
         flash(f"Book returned successfully! Penalty: ${penalty}", "success")
     else:
-        flash("Failed to return book.", "danger")
+        flash("Failed to return book. Please check that the book is borrowed and has a valid due date.", "danger")
     return redirect(url_for("user_dashboard"))
 
 @app.route("/unlock_book/<int:book_id>", methods=["POST"])
