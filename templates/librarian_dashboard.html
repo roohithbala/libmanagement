@@ -69,10 +69,10 @@
                     <th>ID</th>
                     <th>Title</th>
                     <th>Author</th>
-                    <th>Year</th>
-                    <th>ISBN</th>
                     <th>Status</th>
                     <th>Location</th>
+                    <th>Current Borrowers</th>
+                    <th>Penalty</th>
                     <th>Actions</th>
                 </tr>
             </thead>
@@ -82,20 +82,41 @@
                     <td>{{ book.id }}</td>
                     <td>{{ book.title }}</td>
                     <td>{{ book.author }}</td>
-                    <td>{{ book.publication_year }}</td>
-                    <td>{{ book.isbn }}</td>
                     <td>
-                        <span class="badge {% if book.status == 'Available' %}bg-success{% else %}bg-danger{% endif %}">
-                            {{ book.status }}
+                        <span class="badge {% if book.available_copies > 0 %}bg-success{% else %}bg-danger{% endif %}">
+                            {{ "Available" if book.available_copies > 0 else "Taken" }}
+                            ({{ book.available_copies }}/{{ book.total_copies }})
                         </span>
                     </td>
                     <td>{{ book.main_area }} - Rack {{ book.rack_no }} Col {{ book.column_no }}</td>
                     <td>
-                        <a href="{{ url_for('view_book', book_id=book.id) }}" class="btn btn-info btn-sm">View</a>
-                        <a href="{{ url_for('update_book_route', book_id=book.id) }}" class="btn btn-warning btn-sm">Update</a>
-                        <form method="POST" action="{{ url_for('delete_book_route', book_id=book.id) }}" class="d-inline">
-                            <button type="submit" class="btn btn-danger btn-sm">Delete</button>
-                        </form>
+                        {% if book.current_borrowers %}
+                            {{ book.current_borrowers }}
+                        {% else %}
+                            -
+                        {% endif %}
+                    </td>
+                    <td>
+                        {% if book.max_penalty > 0 %}
+                            <span class="text-danger">₹{{ "%.2f"|format(book.max_penalty) }}</span>
+                        {% else %}
+                            -
+                        {% endif %}
+                    </td>
+                    <td>
+                        <div class="btn-group">
+                            <a href="{{ url_for('view_book', book_id=book.id) }}" 
+                               class="btn btn-info btn-sm">View</a>
+                            <a href="{{ url_for('update_book_route', book_id=book.id) }}" 
+                               class="btn btn-warning btn-sm">Edit</a>
+                            {% if not book.available_copies %}
+                                <button type="submit" form="force-return-{{ book.id }}" 
+                                        class="btn btn-danger btn-sm">Force Return</button>
+                            {% endif %}
+                        </div>
+                        <form id="force-return-{{ book.id }}" 
+                              action="{{ url_for('force_return_route', book_id=book.id) }}" 
+                              method="POST" class="d-none"></form>
                     </td>
                 </tr>
                 {% endfor %}

@@ -26,6 +26,146 @@
             width: 50px;
             height: auto;
         }
+        .search-form {
+            background-color: white;
+            border-radius: 10px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+        }
+        .form-select:focus, .form-control:focus {
+            border-color: #6a11cb;
+            box-shadow: 0 0 0 0.2rem rgba(106, 17, 203, 0.25);
+        }
+        .search-results {
+            margin-top: 20px;
+        }
+        .no-results {
+            text-align: center;
+            padding: 20px;
+            color: #6c757d;
+        }
+        .chat-widget {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            width: 350px;
+            background: white;
+            border-radius: 10px;
+            box-shadow: 0 0 10px rgba(0,0,0,0.1);
+            z-index: 1000;
+        }
+
+        .chat-header {
+            background: #6a11cb;
+            color: white;
+            padding: 15px;
+            border-radius: 10px 10px 0 0;
+            cursor: pointer;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .chat-body {
+            height: 400px;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .chat-messages {
+            flex-grow: 1;
+            overflow-y: auto;
+            padding: 15px;
+        }
+
+        .message {
+            margin: 8px;
+            padding: 10px 15px;
+            border-radius: 15px;
+            max-width: 80%;
+            word-wrap: break-word;
+        }
+
+        .message.user {
+            background: #e9ecef;
+            margin-left: auto;
+            border-bottom-right-radius: 5px;
+        }
+
+        .message.bot {
+            background: #f0f2ff;
+            margin-right: auto;
+            border-bottom-left-radius: 5px;
+        }
+
+        .chat-input {
+            padding: 15px;
+            border-top: 1px solid #dee2e6;
+            display: flex;
+            gap: 10px;
+        }
+
+        .chat-input input {
+            flex-grow: 1;
+            padding: 8px;
+            border: 1px solid #dee2e6;
+            border-radius: 20px;
+            outline: none;
+        }
+
+        .chat-input button {
+            background: #6a11cb;
+            color: white;
+            border: none;
+            padding: 8px 20px;
+            border-radius: 20px;
+            cursor: pointer;
+        }
+
+        .chat-suggestion {
+            display: inline-block;
+            margin: 5px;
+            padding: 5px 10px;
+            background: #e9ecef;
+            border-radius: 15px;
+            cursor: pointer;
+            font-size: 0.9em;
+        }
+
+        .chat-suggestion:hover {
+            background: #dee2e6;
+        }
+
+        .message a {
+            color: #007bff;
+            text-decoration: none;
+        }
+
+        .message a.btn {
+            display: inline-block;
+            margin-top: 5px;
+            color: white;
+        }
+
+        .chat-suggestion {
+            background: #e9ecef;
+            border: none;
+            padding: 5px 15px;
+            margin: 3px;
+            border-radius: 15px;
+            cursor: pointer;
+            font-size: 0.9em;
+        }
+
+        .chat-suggestion:hover {
+            background: #dee2e6;
+        }
+
+        .suggestions {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 5px;
+            margin-top: 8px;
+        }
     </style>
 </head>
 <body class="container mt-5">
@@ -38,6 +178,44 @@
             <a href="{{ url_for('logout') }}" class="btn btn-danger btn-sm ms-3">Logout</a>
         </nav>
     </header>
+
+    <!-- Search Form -->
+    <div class="card p-4 mb-4">
+        <form method="GET" action="{{ url_for('user_dashboard') }}" class="row g-3">
+            <div class="col-md-4">
+                <input type="text" class="form-control" name="search" placeholder="Search by title or author" value="{{ request.args.get('search', '') }}">
+            </div>
+            <div class="col-md-3">
+                <select class="form-select" name="category">
+                    <option value="">All Categories</option>
+                    <option value="Fiction" {% if request.args.get('category') == 'Fiction' %}selected{% endif %}>Fiction</option>
+                    <option value="Non-Fiction" {% if request.args.get('category') == 'Non-Fiction' %}selected{% endif %}>Non-Fiction</option>
+                    <option value="Science" {% if request.args.get('category') == 'Science' %}selected{% endif %}>Science</option>
+                    <option value="History" {% if request.args.get('category') == 'History' %}selected{% endif %}>History</option>
+                    <option value="Biography" {% if request.args.get('category') == 'Biography' %}selected{% endif %}>Biography</option>
+                    <option value="Children" {% if request.args.get('category') == 'Children' %}selected{% endif %}>Children</option>
+                    <option value="Mystery" {% if request.args.get('category') == 'Mystery' %}selected{% endif %}>Mystery</option>
+                    <option value="Fantasy" {% if request.args.get('category') == 'Fantasy' %}selected{% endif %}>Fantasy</option>
+                    <option value="Romance" {% if request.args.get('category') == 'Romance' %}selected{% endif %}>Romance</option>
+                    <option value="Others" {% if request.args.get('category') == 'Others' %}selected{% endif %}>Others</option>
+                </select>
+            </div>
+            <div class="col-md-2">
+                <button type="submit" class="btn btn-primary w-100">Search</button>
+            </div>
+            <div class="col-md-2">
+                <a href="{{ url_for('user_dashboard') }}" class="btn btn-secondary w-100">Clear</a>
+            </div>
+        </form>
+    </div>
+
+    <!-- No Results Message -->
+    {% if not books %}
+        <div class="card p-4 no-results">
+            <h5 class="text-muted">No books found matching your search criteria</h5>
+            <p>Try adjusting your search terms or category selection</p>
+        </div>
+    {% endif %}
 
     <!-- Flash Messages -->
     {% with messages = get_flashed_messages(with_categories=True) %}
@@ -57,21 +235,38 @@
         <div class="row">
             {% set available_count = 0 %}
             {% for book in books %}
-                {% if book.status == "Available" %}
+                {% if book.available_copies > 0 %}
                     {% set available_count = available_count + 1 %}
                     <div class="col-md-4 mb-4">
-                        <div class="card">
+                        <div class="card h-100">
                             <img src="{{ book.cover_url }}" class="card-img-top" alt="Book Cover">
                             <div class="card-body">
-                                <h5 class="card-title">
-                                    <a href="{{ url_for('view_book', book_id=book.id) }}">{{ book.title }}</a>
-                                </h5>
-                                <p class="card-text">Author: {{ book.author }}</p>
-                                <p class="card-text">ISBN: {{ book.isbn }}</p>
-                                <p class="card-text"><small>{{ book.location }}</small></p>
-                                <form method="POST" action="{{ url_for('take_book_route', book_id=book.id) }}">
-                                    <button type="submit" class="btn btn-primary">Borrow</button>
-                                </form>
+                                <h5 class="card-title">{{ book.title }}</h5>
+                                <p class="card-text">
+                                    <strong>Author:</strong> {{ book.author }}<br>
+                                    <strong>Category:</strong> {{ book.category }}<br>
+                                    <strong>Location:</strong> {{ book.location }}
+                                </p>
+                                {% if book.is_borrowed_by_me %}
+                                    <div class="alert {% if book.is_overdue %}alert-danger{% else %}alert-info{% endif %}">
+                                        <strong>Due Date:</strong> {{ book.my_due_date }}<br>
+                                        {% if book.is_overdue %}
+                                            <span class="text-danger">Overdue!</span><br>
+                                        {% endif %}
+                                        {% if book.my_penalty > 0 %}
+                                            <strong>Penalty:</strong> <span class="text-danger">₹{{ "%.2f"|format(book.my_penalty) }}</span>
+                                        {% endif %}
+                                    </div>
+                                    <form method="POST" action="{{ url_for('return_book_route', book_id=book.id) }}">
+                                        <button type="submit" class="btn btn-warning">Return Book</button>
+                                    </form>
+                                {% elif book.available_copies > 0 %}
+                                    <form method="POST" action="{{ url_for('take_book_route', book_id=book.id) }}">
+                                        <button type="submit" class="btn btn-primary">Borrow Book</button>
+                                    </form>
+                                {% else %}
+                                    <button class="btn btn-secondary" disabled>Not Available</button>
+                                {% endif %}
                             </div>
                         </div>
                     </div>
@@ -79,7 +274,7 @@
             {% endfor %}
             {% if available_count == 0 %}
                 <div class="col-12">
-                    <p class="text-muted">No available books.</p>
+                    <p class="text-muted">No available books found.</p>
                 </div>
             {% endif %}
         </div>
@@ -91,19 +286,26 @@
         <div class="row">
             {% set borrowed_count = 0 %}
             {% for book in books %}
-                {% if book.status == "Taken" and (book.borrowed_by|int) == (session["user_id"]|int) %}
+                {% if book.is_borrowed_by_me %}
                     {% set borrowed_count = borrowed_count + 1 %}
                     <div class="col-md-4 mb-4">
-                        <div class="card">
+                        <div class="card h-100">
                             <img src="{{ book.cover_url }}" class="card-img-top" alt="Book Cover">
                             <div class="card-body">
-                                <h5 class="card-title">
-                                    <a href="{{ url_for('view_book', book_id=book.id) }}">{{ book.title }}</a>
-                                </h5>
-                                <p class="card-text">Due Date: {{ book.due_date or "N/A" }}</p>
-                                <p class="card-text">Penalty: ${{ book.penalty }}</p>
+                                <h5 class="card-title">{{ book.title }}</h5>
+                                <p class="card-text">Author: {{ book.author }}</p>
+                                <p class="card-text">Category: {{ book.category }}</p>
+                                <p class="card-text"><small class="text-muted">Location: {{ book.location }}</small></p>
+                                {% if book.penalty > 0 %}
+                                    <div class="alert alert-danger m-2">
+                                        <small>
+                                            <i class="fas fa-exclamation-circle"></i>
+                                            Penalty Due: ₹{{ "%.2f"|format(book.penalty) }}
+                                        </small>
+                                    </div>
+                                {% endif %}
                                 <form method="POST" action="{{ url_for('return_book_route', book_id=book.id) }}">
-                                    <button type="submit" class="btn btn-warning">Return Book</button>
+                                    <button type="submit" class="btn btn-warning w-100">Return</button>
                                 </form>
                             </div>
                         </div>
@@ -118,7 +320,134 @@
         </div>
     </div>
 
+    <div class="chat-widget" id="chatWidget">
+        <div class="chat-header" onclick="toggleChat()">
+            <span>Library Assistant</span>
+            <button class="minimize-btn" id="minimizeBtn">−</button>
+        </div>
+        <div class="chat-body" id="chatBody">
+            <div class="chat-messages" id="chatMessages">
+                <div class="message bot">
+                    Hello! I'm your Library Assistant. How can I help you today?
+                </div>
+            </div>
+            <div class="chat-input">
+                <input type="text" id="userInput" placeholder="Type your message...">
+                <button onclick="sendMessage()">Send</button>
+            </div>
+        </div>
+    </div>
+
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        function toggleChat() {
+            const chatBody = document.getElementById('chatBody');
+            const minimizeBtn = document.getElementById('minimizeBtn');
+            if (chatBody.style.display === 'none') {
+                chatBody.style.display = 'flex';
+                minimizeBtn.textContent = '−';
+            } else {
+                chatBody.style.display = 'none';
+                minimizeBtn.textContent = '+';
+            }
+        }
+
+        function addMessage(message, type, suggestions = []) {
+            const chatMessages = document.getElementById('chatMessages');
+            const messageDiv = document.createElement('div');
+            messageDiv.className = `message ${type}`;
+            messageDiv.textContent = message;
+            chatMessages.appendChild(messageDiv);
+
+            if (suggestions.length > 0) {
+                const suggestionsDiv = document.createElement('div');
+                suggestionsDiv.className = 'suggestions';
+                suggestions.forEach(suggestion => {
+                    const suggestionSpan = document.createElement('span');
+                    suggestionSpan.className = 'chat-suggestion';
+                    suggestionSpan.textContent = suggestion;
+                    suggestionSpan.onclick = () => {
+                        document.getElementById('userInput').value = suggestion;
+                        sendMessage();
+                    };
+                    suggestionsDiv.appendChild(suggestionSpan);
+                });
+                chatMessages.appendChild(suggestionsDiv);
+            }
+
+            chatMessages.scrollTop = chatMessages.scrollHeight;
+        }
+
+        function sendMessage() {
+            const input = document.getElementById('userInput');
+            const message = input.value.trim();
+            if (!message) return;
+
+            addMessage(message, 'user');
+            input.value = '';
+
+            fetch('/chatbot', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ message: message })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.type === 'search_prompt') {
+                    addMessage(data.message, 'bot');
+                    addSuggestions(data.suggestions);
+                }
+                else if (data.type === 'search_results') {
+                    const messageDiv = document.createElement('div');
+                    messageDiv.className = 'message bot';
+                    messageDiv.innerHTML = data.message;  // Use innerHTML to render HTML links
+                    document.getElementById('chatMessages').appendChild(messageDiv);
+                    if (data.suggestions) {
+                        addSuggestions(data.suggestions);
+                    }
+                }
+                else {
+                    addMessage(data.message, 'bot');
+                    if (data.suggestions) {
+                        addSuggestions(data.suggestions);
+                    }
+                }
+                
+                const chatMessages = document.getElementById('chatMessages');
+                chatMessages.scrollTop = chatMessages.scrollHeight;
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                addMessage('Sorry, something went wrong. Please try again.', 'bot');
+            });
+        }
+
+        function addSuggestions(suggestions) {
+            if (!suggestions || !suggestions.length) return;
+            
+            const suggestionsDiv = document.createElement('div');
+            suggestionsDiv.className = 'suggestions';
+            suggestions.forEach(suggestion => {
+                const chip = document.createElement('button');
+                chip.className = 'chat-suggestion';
+                chip.textContent = suggestion;
+                chip.onclick = () => {
+                    document.getElementById('userInput').value = suggestion;
+                    sendMessage();
+                };
+                suggestionsDiv.appendChild(chip);
+            });
+            document.getElementById('chatMessages').appendChild(suggestionsDiv);
+        }
+
+        document.getElementById('userInput').addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                sendMessage();
+            }
+        });
+    </script>
 
 </body>
 </html>
