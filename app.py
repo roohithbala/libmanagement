@@ -6,10 +6,13 @@ from datetime import datetime
 
 from book import (update_book_location, borrow_book, return_book, get_book_history,
                   add_book, update_book, delete_book, unlock_book,force_return_book,adjust_penalty)
+from chatbot_routes import chatbot_bp
 
 app = Flask(__name__)
 app.secret_key = "supersecretkey"
 DATABASE = "library.db"
+
+app.register_blueprint(chatbot_bp)
 
 def get_db_connection():
     conn = sqlite3.connect(DATABASE)

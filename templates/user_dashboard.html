@@ -47,18 +47,19 @@
             position: fixed;
             bottom: 20px;
             right: 20px;
-            width: 350px;
-            background: white;
+            width: 300px;
+            border: 1px solid #ccc;
             border-radius: 10px;
-            box-shadow: 0 0 10px rgba(0,0,0,0.1);
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            background: white;
+            overflow: hidden;
             z-index: 1000;
         }
 
         .chat-header {
             background: #6a11cb;
             color: white;
-            padding: 15px;
-            border-radius: 10px 10px 0 0;
+            padding: 10px;
             cursor: pointer;
             display: flex;
             justify-content: space-between;
@@ -66,15 +67,38 @@
         }
 
         .chat-body {
-            height: 400px;
-            display: flex;
+            display: none;
             flex-direction: column;
+            height: 400px;
         }
 
         .chat-messages {
             flex-grow: 1;
             overflow-y: auto;
-            padding: 15px;
+            padding: 10px;
+        }
+
+        .chat-input {
+            display: flex;
+            gap: 10px;
+            padding: 10px;
+            border-top: 1px solid #ccc;
+        }
+
+        .chat-input input {
+            flex-grow: 1;
+            padding: 8px;
+            border: 1px solid #ccc;
+            border-radius: 20px;
+        }
+
+        .chat-input button {
+            background: #6a11cb;
+            color: white;
+            border: none;
+            padding: 8px 20px;
+            border-radius: 20px;
+            cursor: pointer;
         }
 
         .message {
@@ -88,37 +112,11 @@
         .message.user {
             background: #e9ecef;
             margin-left: auto;
-            border-bottom-right-radius: 5px;
         }
 
         .message.bot {
             background: #f0f2ff;
             margin-right: auto;
-            border-bottom-left-radius: 5px;
-        }
-
-        .chat-input {
-            padding: 15px;
-            border-top: 1px solid #dee2e6;
-            display: flex;
-            gap: 10px;
-        }
-
-        .chat-input input {
-            flex-grow: 1;
-            padding: 8px;
-            border: 1px solid #dee2e6;
-            border-radius: 20px;
-            outline: none;
-        }
-
-        .chat-input button {
-            background: #6a11cb;
-            color: white;
-            border: none;
-            padding: 8px 20px;
-            border-radius: 20px;
-            cursor: pointer;
         }
 
         .chat-suggestion {
@@ -130,7 +128,6 @@
             cursor: pointer;
             font-size: 0.9em;
         }
-
         .chat-suggestion:hover {
             background: #dee2e6;
         }
@@ -328,11 +325,11 @@
         <div class="chat-body" id="chatBody">
             <div class="chat-messages" id="chatMessages">
                 <div class="message bot">
-                    Hello! I'm your Library Assistant. How can I help you today?
+                    Hello! How can I assist you today? 😊
                 </div>
             </div>
             <div class="chat-input">
-                <input type="text" id="userInput" placeholder="Type your message...">
+                <input type="text" id="userInput" placeholder="Type your message here...">
                 <button onclick="sendMessage()">Send</button>
             </div>
         </div>
@@ -356,26 +353,26 @@
             const chatMessages = document.getElementById('chatMessages');
             const messageDiv = document.createElement('div');
             messageDiv.className = `message ${type}`;
-            messageDiv.textContent = message;
+            messageDiv.innerHTML = message; // Use innerHTML to render formatted messages
             chatMessages.appendChild(messageDiv);
 
             if (suggestions.length > 0) {
                 const suggestionsDiv = document.createElement('div');
                 suggestionsDiv.className = 'suggestions';
                 suggestions.forEach(suggestion => {
-                    const suggestionSpan = document.createElement('span');
-                    suggestionSpan.className = 'chat-suggestion';
-                    suggestionSpan.textContent = suggestion;
-                    suggestionSpan.onclick = () => {
+                    const chip = document.createElement('button');
+                    chip.className = 'chat-suggestion';
+                    chip.textContent = suggestion;
+                    chip.onclick = () => {
                         document.getElementById('userInput').value = suggestion;
                         sendMessage();
                     };
-                    suggestionsDiv.appendChild(suggestionSpan);
+                    suggestionsDiv.appendChild(chip);
                 });
                 chatMessages.appendChild(suggestionsDiv);
             }
 
-            chatMessages.scrollTop = chatMessages.scrollHeight;
+            chatMessages.scrollTop = chatMessages.scrollHeight; // Scroll to the bottom
         }
 
         function sendMessage() {
@@ -395,51 +392,12 @@
             })
             .then(response => response.json())
             .then(data => {
-                if (data.type === 'search_prompt') {
-                    addMessage(data.message, 'bot');
-                    addSuggestions(data.suggestions);
-                }
-                else if (data.type === 'search_results') {
-                    const messageDiv = document.createElement('div');
-                    messageDiv.className = 'message bot';
-                    messageDiv.innerHTML = data.message;  // Use innerHTML to render HTML links
-                    document.getElementById('chatMessages').appendChild(messageDiv);
-                    if (data.suggestions) {
-                        addSuggestions(data.suggestions);
-                    }
-                }
-                else {
-                    addMessage(data.message, 'bot');
-                    if (data.suggestions) {
-                        addSuggestions(data.suggestions);
-                    }
-                }
-                
-                const chatMessages = document.getElementById('chatMessages');
-                chatMessages.scrollTop = chatMessages.scrollHeight;
+                addMessage(data.message, 'bot', data.suggestions);
             })
             .catch(error => {
                 console.error('Error:', error);
                 addMessage('Sorry, something went wrong. Please try again.', 'bot');
             });
-        }
-
-        function addSuggestions(suggestions) {
-            if (!suggestions || !suggestions.length) return;
-            
-            const suggestionsDiv = document.createElement('div');
-            suggestionsDiv.className = 'suggestions';
-            suggestions.forEach(suggestion => {
-                const chip = document.createElement('button');
-                chip.className = 'chat-suggestion';
-                chip.textContent = suggestion;
-                chip.onclick = () => {
-                    document.getElementById('userInput').value = suggestion;
-                    sendMessage();
-                };
-                suggestionsDiv.appendChild(chip);
-            });
-            document.getElementById('chatMessages').appendChild(suggestionsDiv);
         }
 
         document.getElementById('userInput').addEventListener('keypress', function(e) {
