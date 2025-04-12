@@ -37,6 +37,26 @@ def get_db_connection():
 
 def init_db():
     with get_db_connection() as conn:
+        # Update users table with new fields
+        conn.execute("""
+        CREATE TABLE IF NOT EXISTS users (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            username TEXT UNIQUE NOT NULL,
+            email TEXT UNIQUE NOT NULL,
+            password TEXT NOT NULL,
+            role TEXT NOT NULL,
+            first_name TEXT,
+            last_name TEXT,
+            date_of_birth DATE,
+            gender TEXT,
+            phone TEXT,
+            address TEXT,
+            occupation TEXT,
+            reading_interests TEXT,
+            created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+        );
+        """)
+        
         # Create books table
         conn.execute("""
         CREATE TABLE IF NOT EXISTS books (
@@ -120,7 +140,7 @@ def init_db():
         );
         """)
         
-        print("Created reset_requests table")
+        print("Updated users table schema")
         conn.commit()
 
 init_db()
@@ -222,23 +242,55 @@ def home():
 @app.route("/register", methods=["GET", "POST"])
 def register():
     if request.method == "POST":
+        # Basic Information
         username = request.form["username"]
         email = request.form["email"]
         password = request.form["password"]
         role = request.form["role"]
+        
+        # Personal Information
+        first_name = request.form.get("first_name")
+        last_name = request.form.get("last_name")
+        date_of_birth = request.form.get("date_of_birth")
+        gender = request.form.get("gender")
+        
+        # Contact Information
+        phone = request.form.get("phone")
+        address = request.form.get("address")
+        
+        # Additional Information
+        occupation = request.form.get("occupation")
+        reading_interests = request.form.get("interests")
+
+        # Password hashing
         hashed_password = generate_password_hash(password, method="pbkdf2:sha256")
+
         try:
             with get_db_connection() as conn:
-                conn.execute(
-                    "INSERT INTO users (username, email, password, role) VALUES (?, ?, ?, ?)",
-                    (username, email, hashed_password, role)
-                )
+                conn.execute("""
+                    INSERT INTO users (
+                        username, email, password, role,
+                        first_name, last_name, date_of_birth, gender,
+                        phone, address, occupation, reading_interests
+                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                """, (
+                    username, email, hashed_password, role,
+                    first_name, last_name, date_of_birth, gender,
+                    phone, address, occupation, reading_interests
+                ))
                 conn.commit()
-            flash("Registration successful! Please log in.", "success")
-            return redirect(url_for("login"))
-        except sqlite3.IntegrityError:
-            flash("Username or email already exists!", "danger")
+                flash("Registration successful! Please log in.", "success")
+                return redirect(url_for("login"))
+                
+        except sqlite3.IntegrityError as e:
+            if "username" in str(e):
+                flash("Username already exists!", "danger")
+            elif "email" in str(e):
+                flash("Email already exists!", "danger")
+            else:
+                flash("Registration failed! Please try again.", "danger")
             return redirect(url_for("register"))
+            
     return render_template("register.html")
 
 @app.route("/login", methods=["GET", "POST"])
@@ -622,49 +674,51 @@ def profile():
         return redirect(url_for("login"))
         
     with get_db_connection() as conn:
-        user = conn.execute(
-            "SELECT * FROM users WHERE id = ?", 
-            (session["user_id"],)
-        ).fetchone()
-        
-        # Get user statistics
-        stats = conn.execute("""
-            SELECT 
-                COUNT(DISTINCT CASE WHEN bc.status = 'Taken' THEN bc.copy_id END) as current_books,
-                COUNT(DISTINCT bh.id) as total_borrowed,
-                COALESCE(SUM(bc.penalty), 0) as current_penalties
+        user = conn.execute("""
+            SELECT u.*, 
+                   COUNT(DISTINCT CASE WHEN bc.status = 'Taken' THEN bc.copy_id END) as current_books,
+                   COUNT(DISTINCT bh.id) as total_borrowed,
+                   COALESCE(SUM(bc.penalty), 0) as current_penalties
             FROM users u
             LEFT JOIN book_copies bc ON u.id = bc.borrowed_by
             LEFT JOIN book_history bh ON u.id = bh.user_id
             WHERE u.id = ?
+            GROUP BY u.id
         """, (session["user_id"],)).fetchone()
 
     if request.method == "POST":
-        username = request.form["username"]
-        email = request.form["email"]
-        new_password = request.form["password"]
+        # Update all fields
+        updates = {
+            "username": request.form["username"],
+            "email": request.form["email"],
+            "first_name": request.form.get("first_name"),
+            "last_name": request.form.get("last_name"),
+            "date_of_birth": request.form.get("date_of_birth"),
+            "gender": request.form.get("gender"),
+            "phone": request.form.get("phone"),
+            "address": request.form.get("address"),
+            "occupation": request.form.get("occupation"),
+            "reading_interests": request.form.get("interests")
+        }
+        
+        new_password = request.form.get("password")
+        if new_password:
+            updates["password"] = generate_password_hash(new_password, method="pbkdf2:sha256")
 
         try:
             with get_db_connection() as conn:
-                if new_password:
-                    hashed_password = generate_password_hash(new_password, method="pbkdf2:sha256")
-                    conn.execute(
-                        "UPDATE users SET username=?, email=?, password=? WHERE id=?",
-                        (username, email, hashed_password, session["user_id"])
-                    )
-                else:
-                    conn.execute(
-                        "UPDATE users SET username=?, email=? WHERE id=?",
-                        (username, email, session["user_id"])
-                    )
+                query = "UPDATE users SET " + ", ".join(f"{k}=?" for k in updates.keys()) + " WHERE id=?"
+                conn.execute(query, list(updates.values()) + [session["user_id"]])
                 conn.commit()
-                session["username"] = username
+                
+                session["username"] = updates["username"]
                 flash("Profile updated successfully!", "success")
                 return redirect(url_for("profile"))
+                
         except sqlite3.IntegrityError:
             flash("Username or email already exists!", "danger")
 
-    return render_template("profile.html", user=user, stats=stats)
+    return render_template("profile.html", user=user)
 
 # Password Reset Routes
 @app.route("/forgot-password", methods=["GET", "POST"])

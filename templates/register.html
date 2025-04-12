@@ -1,60 +1,219 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Register - Library Management</title>
-  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css">
-  <style>
-      body { background-color: #f8f9fa; }
-      .register-container { max-width: 500px; margin: 50px auto; }
-      .card { border: none; border-radius: 10px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
-      .btn-success { background-color: #6a11cb; border: none; }
-      .btn-success:hover { background-color: #2575fc; }
-      .form-label { font-weight: bold; }
-      .text-muted { font-size: 0.9rem; }
-  </style>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Register - Library Management</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <style>
+        body { 
+            background-color: #f8f9fa; 
+            font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+        }
+        .register-container { 
+            max-width: 800px; 
+            margin: 30px auto; 
+        }
+        .card { 
+            border: none; 
+            border-radius: 15px; 
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        }
+        .btn-success { 
+            background-color: #6a11cb; 
+            border: none;
+            padding: 12px;
+            font-weight: 500;
+        }
+        .btn-success:hover { 
+            background-color: #2575fc; 
+        }
+        .form-label { 
+            font-weight: 600;
+            color: #344767;
+        }
+        .text-muted { 
+            font-size: 0.9rem; 
+        }
+        .form-control, .form-select {
+            padding: 10px 15px;
+            border-radius: 8px;
+            border: 2px solid #e9ecef;
+        }
+        .form-control:focus, .form-select:focus {
+            border-color: #6a11cb;
+            box-shadow: 0 0 0 0.2rem rgba(106, 17, 203, 0.25);
+        }
+        .required::after {
+            content: "*";
+            color: #dc3545;
+            margin-left: 4px;
+        }
+    </style>
 </head>
 <body>
-  <div class="register-container">
-    <h2 class="text-center mb-4">Register</h2>
-    {% with messages = get_flashed_messages(with_categories=True) %}
-      {% if messages %}
-         {% for category, message in messages %}
-             <div class="alert alert-{{ category }} alert-dismissible fade show" role="alert">
-                 {{ message }}
-                 <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-             </div>
-         {% endfor %}
-      {% endif %}
-    {% endwith %}
-    <form method="POST" class="card p-4">
-      <div class="mb-3">
-         <label for="username" class="form-label">Username</label>
-         <input type="text" class="form-control" id="username" name="username" placeholder="Choose a username" required>
-      </div>
-      <div class="mb-3">
-         <label for="email" class="form-label">Email</label>
-         <input type="email" class="form-control" id="email" name="email" placeholder="Enter your email" required>
-      </div>
-      <div class="mb-3">
-         <label for="password" class="form-label">Password</label>
-         <input type="password" class="form-control" id="password" name="password" placeholder="Create a password" required>
-      </div>
-      <div class="mb-3">
-         <label for="role" class="form-label">Select Role</label>
-         <select class="form-select" id="role" name="role" required>
-             <option value="user">User</option>
-             <option value="librarian">Librarian</option>
-             <option value="admin">Admin</option>
-         </select>
-      </div>
-      <button type="submit" class="btn btn-success w-100">Register</button>
-    </form>
-    <div class="text-center mt-3">
-         <p class="text-muted">Already have an account? <a href="{{ url_for('login') }}">Login here</a>.</p>
+    <div class="register-container">
+        <div class="text-center mb-4">
+            <h2 class="mb-2">Create Your Account</h2>
+            <p class="text-muted">Please fill in all the required fields to register</p>
+        </div>
+
+        {% with messages = get_flashed_messages(with_categories=True) %}
+            {% if messages %}
+                {% for category, message in messages %}
+                    <div class="alert alert-{{ category }} alert-dismissible fade show" role="alert">
+                        {{ message }}
+                        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                    </div>
+                {% endfor %}
+            {% endif %}
+        {% endwith %}
+
+        <form method="POST" class="card p-4" id="registrationForm">
+            <div class="row">
+                <!-- Personal Information -->
+                <div class="col-md-6 mb-3">
+                    <h5 class="mb-3"><i class="fas fa-user me-2"></i>Personal Information</h5>
+                    <div class="mb-3">
+                        <label for="username" class="form-label required">Username</label>
+                        <input type="text" class="form-control" id="username" name="username" 
+                               pattern="[A-Za-z0-9_]{3,20}" title="3-20 characters, letters, numbers and underscore only"
+                               required>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label for="firstName" class="form-label required">First Name</label>
+                            <input type="text" class="form-control" id="firstName" name="first_name" required>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label for="lastName" class="form-label required">Last Name</label>
+                            <input type="text" class="form-control" id="lastName" name="last_name" required>
+                        </div>
+                    </div>
+                    <div class="mb-3">
+                        <label for="dateOfBirth" class="form-label required">Date of Birth</label>
+                        <input type="date" class="form-control" id="dateOfBirth" name="date_of_birth" required>
+                    </div>
+                    <div class="mb-3">
+                        <label for="gender" class="form-label">Gender</label>
+                        <select class="form-select" id="gender" name="gender">
+                            <option value="">Prefer not to say</option>
+                            <option value="male">Male</option>
+                            <option value="female">Female</option>
+                            <option value="other">Other</option>
+                        </select>
+                    </div>
+                </div>
+
+                <!-- Contact Information -->
+                <div class="col-md-6 mb-3">
+                    <h5 class="mb-3"><i class="fas fa-address-card me-2"></i>Contact Information</h5>
+                    <div class="mb-3">
+                        <label for="email" class="form-label required">Email</label>
+                        <input type="email" class="form-control" id="email" name="email" required>
+                    </div>
+                    <div class="mb-3">
+                        <label for="phone" class="form-label">Phone Number</label>
+                        <input type="tel" class="form-control" id="phone" name="phone" 
+                               pattern="[0-9]{10}" title="Please enter a valid 10-digit phone number">
+                    </div>
+                    <div class="mb-3">
+                        <label for="address" class="form-label">Address</label>
+                        <textarea class="form-control" id="address" name="address" rows="3"></textarea>
+                    </div>
+                </div>
+
+                <!-- Account Settings -->
+                <div class="col-12 mb-3">
+                    <h5 class="mb-3"><i class="fas fa-lock me-2"></i>Account Settings</h5>
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label for="password" class="form-label required">Password</label>
+                            <input type="password" class="form-control" id="password" name="password" 
+                                   pattern="^(?=.*[A-Za-z])(?=.*\d)[A-Za-z\d]{8,}$"
+                                   title="Minimum 8 characters, at least one letter and one number"
+                                   required>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label for="confirmPassword" class="form-label required">Confirm Password</label>
+                            <input type="password" class="form-control" id="confirmPassword" 
+                                   name="confirm_password" required>
+                        </div>
+                    </div>
+                    <div class="mb-3">
+                        <label for="role" class="form-label required">Select Role</label>
+                        <select class="form-select" id="role" name="role" required>
+                            <option value="user">User</option>
+                            <option value="librarian">Librarian</option>
+                            <option value="admin">Admin</option>
+                        </select>
+                    </div>
+                </div>
+
+                <!-- Additional Information -->
+                <div class="col-12 mb-3">
+                    <h5 class="mb-3"><i class="fas fa-info-circle me-2"></i>Additional Information</h5>
+                    <div class="mb-3">
+                        <label for="occupation" class="form-label">Occupation</label>
+                        <input type="text" class="form-control" id="occupation" name="occupation">
+                    </div>
+                    <div class="mb-3">
+                        <label for="interests" class="form-label">Reading Interests</label>
+                        <input type="text" class="form-control" id="interests" name="interests" 
+                               placeholder="e.g., Fiction, Science, History">
+                    </div>
+                </div>
+
+                <!-- Terms and Conditions -->
+                <div class="col-12 mb-3">
+                    <div class="form-check">
+                        <input class="form-check-input" type="checkbox" id="terms" required>
+                        <label class="form-check-label" for="terms">
+                            I agree to the <a href="#" data-bs-toggle="modal" data-bs-target="#termsModal">Terms and Conditions</a>
+                        </label>
+                    </div>
+                </div>
+            </div>
+
+            <button type="submit" class="btn btn-success">
+                <i class="fas fa-user-plus me-2"></i>Create Account
+            </button>
+        </form>
+
+        <div class="text-center mt-3">
+            <p class="text-muted">Already have an account? <a href="{{ url_for('login') }}">Login here</a></p>
+        </div>
     </div>
-  </div>
-  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+
+    <!-- Terms and Conditions Modal -->
+    <div class="modal fade" id="termsModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Terms and Conditions</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <!-- Add your terms and conditions text here -->
+                    <p>By creating an account, you agree to...</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        // Password validation
+        document.getElementById('registrationForm').addEventListener('submit', function(e) {
+            const password = document.getElementById('password');
+            const confirm = document.getElementById('confirmPassword');
+            
+            if (password.value !== confirm.value) {
+                e.preventDefault();
+                alert('Passwords do not match!');
+            }
+        });
+    </script>
 </body>
 </html>

@@ -124,9 +124,60 @@ def migrate_database():
     add_reset_requests_table()
     return True
 
+def migrate_users():
+    conn = sqlite3.connect('library.db')
+    conn.row_factory = sqlite3.Row
+    cursor = conn.cursor()
+
+    try:
+        # Create backup of current users
+        cursor.execute("CREATE TABLE users_backup AS SELECT * FROM users")
+        
+        # Drop existing table
+        cursor.execute("DROP TABLE users")
+        
+        # Create new table with updated schema
+        cursor.execute("""
+        CREATE TABLE users (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            username TEXT UNIQUE NOT NULL,
+            email TEXT UNIQUE NOT NULL,
+            password TEXT NOT NULL,
+            role TEXT NOT NULL,
+            first_name TEXT,
+            last_name TEXT,
+            date_of_birth DATE,
+            gender TEXT,
+            phone TEXT,
+            address TEXT,
+            occupation TEXT,
+            reading_interests TEXT,
+            created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+        )
+        """)
+        
+        # Copy existing data
+        cursor.execute("""
+        INSERT INTO users (id, username, email, password, role, created_at)
+        SELECT id, username, email, password, role, CURRENT_TIMESTAMP
+        FROM users_backup
+        """)
+        
+        conn.commit()
+        print("Migration completed successfully!")
+        
+    except Exception as e:
+        conn.rollback()
+        print(f"Migration failed: {e}")
+        
+    finally:
+        conn.close()
+
 if __name__ == "__main__":
     # Run migration
     if migrate_database():
         print("Database migration completed successfully.")
     else:
         print("Database migration failed!")
+    
+    migrate_users()

@@ -3,67 +3,219 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Profile Settings</title>
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css">
+    <title>Profile Settings - Library Management</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
     <style>
         body {
             background-color: #f8f9fa;
+            font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
         }
         .profile-container {
-            max-width: 600px;
-            margin: 50px auto;
+            max-width: 800px;
+            margin: 30px auto;
         }
         .card {
             border: none;
-            border-radius: 10px;
-            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            border-radius: 15px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
         }
         .btn-primary {
             background-color: #6a11cb;
             border: none;
+            padding: 12px;
+            font-weight: 500;
         }
         .btn-primary:hover {
             background-color: #2575fc;
         }
         .form-label {
             font-weight: 600;
+            color: #344767;
+        }
+        .form-control, .form-select {
+            padding: 10px 15px;
+            border-radius: 8px;
+            border: 2px solid #e9ecef;
+        }
+        .form-control:focus, .form-select:focus {
+            border-color: #6a11cb;
+            box-shadow: 0 0 0 0.2rem rgba(106, 17, 203, 0.25);
+        }
+        .section-title {
+            color: #344767;
+            font-size: 1.1rem;
+            margin-bottom: 1.5rem;
+            border-bottom: 2px solid #e9ecef;
+            padding-bottom: 0.5rem;
+        }
+        .stats-card {
+            background: linear-gradient(45deg, #6a11cb, #2575fc);
+            color: white;
+            border-radius: 10px;
+            padding: 1rem;
+            margin-bottom: 2rem;
+        }
+        .stats-value {
+            font-size: 2rem;
+            font-weight: bold;
+        }
+        .stats-label {
+            font-size: 0.9rem;
+            opacity: 0.9;
         }
     </style>
 </head>
 <body>
     <div class="profile-container">
-        <h2 class="text-center mb-4">Profile Settings</h2>
+        <!-- User Stats -->
+        <div class="row mb-4">
+            <div class="col-md-4">
+                <div class="stats-card">
+                    <div class="stats-value">{{ user.current_books }}</div>
+                    <div class="stats-label">Current Books</div>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="stats-card">
+                    <div class="stats-value">{{ user.total_borrowed }}</div>
+                    <div class="stats-label">Total Borrowed</div>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="stats-card">
+                    <div class="stats-value">₹{{ "%.2f"|format(user.current_penalties) }}</div>
+                    <div class="stats-label">Current Penalties</div>
+                </div>
+            </div>
+        </div>
+
         {% with messages = get_flashed_messages(with_categories=true) %}
             {% if messages %}
                 {% for category, message in messages %}
-                    <div class="alert alert-{{ category }} alert-dismissible fade show" role="alert">
+                    <div class="alert alert-{{ category }} alert-dismissible fade show">
+                        <i class="fas fa-{{ 'info-circle' if category == 'info' 
+                                    else 'check-circle' if category == 'success'
+                                    else 'exclamation-circle' if category == 'warning'
+                                    else 'times-circle' }} me-2"></i>
                         {{ message }}
-                        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
                     </div>
                 {% endfor %}
             {% endif %}
         {% endwith %}
-        <form method="POST" class="card p-4">
-            <div class="mb-3">
-                <label for="username" class="form-label">Username</label>
-                <input type="text" class="form-control" id="username" name="username" value="{{ user.username }}" required>
+
+        <form method="POST" class="card p-4" id="profileForm">
+            <h4 class="mb-4 text-center">Profile Settings</h4>
+            
+            <!-- Account Information -->
+            <h5 class="section-title"><i class="fas fa-user-circle me-2"></i>Account Information</h5>
+            <div class="row mb-4">
+                <div class="col-md-6 mb-3">
+                    <label for="username" class="form-label">Username</label>
+                    <input type="text" class="form-control" id="username" name="username" 
+                           value="{{ user.username }}" required>
+                </div>
+                <div class="col-md-6 mb-3">
+                    <label for="email" class="form-label">Email Address</label>
+                    <input type="email" class="form-control" id="email" name="email" 
+                           value="{{ user.email }}" required>
+                </div>
             </div>
-            <div class="mb-3">
-                <label for="email" class="form-label">Email Address</label>
-                <input type="email" class="form-control" id="email" name="email" value="{{ user.email }}" required>
+
+            <!-- Personal Information -->
+            <h5 class="section-title"><i class="fas fa-id-card me-2"></i>Personal Information</h5>
+            <div class="row mb-4">
+                <div class="col-md-6 mb-3">
+                    <label for="firstName" class="form-label">First Name</label>
+                    <input type="text" class="form-control" id="firstName" name="first_name" 
+                           value="{{ user.first_name }}">
+                </div>
+                <div class="col-md-6 mb-3">
+                    <label for="lastName" class="form-label">Last Name</label>
+                    <input type="text" class="form-control" id="lastName" name="last_name" 
+                           value="{{ user.last_name }}">
+                </div>
+                <div class="col-md-6 mb-3">
+                    <label for="dateOfBirth" class="form-label">Date of Birth</label>
+                    <input type="date" class="form-control" id="dateOfBirth" name="date_of_birth" 
+                           value="{{ user.date_of_birth }}">
+                </div>
+                <div class="col-md-6 mb-3">
+                    <label for="gender" class="form-label">Gender</label>
+                    <select class="form-select" id="gender" name="gender">
+                        <option value="">Prefer not to say</option>
+                        <option value="male" {% if user.gender == 'male' %}selected{% endif %}>Male</option>
+                        <option value="female" {% if user.gender == 'female' %}selected{% endif %}>Female</option>
+                        <option value="other" {% if user.gender == 'other' %}selected{% endif %}>Other</option>
+                    </select>
+                </div>
             </div>
-            <div class="mb-3">
-                <label for="password" class="form-label">New Password <small class="text-muted">(leave blank if not changing)</small></label>
-                <input type="password" class="form-control" id="password" name="password" placeholder="Enter new password">
+
+            <!-- Contact Information -->
+            <h5 class="section-title"><i class="fas fa-address-book me-2"></i>Contact Information</h5>
+            <div class="row mb-4">
+                <div class="col-md-6 mb-3">
+                    <label for="phone" class="form-label">Phone Number</label>
+                    <input type="tel" class="form-control" id="phone" name="phone" 
+                           value="{{ user.phone }}" pattern="[0-9]{10}">
+                </div>
+                <div class="col-md-6 mb-3">
+                    <label for="address" class="form-label">Address</label>
+                    <textarea class="form-control" id="address" name="address" 
+                              rows="3">{{ user.address }}</textarea>
+                </div>
             </div>
-            <button type="submit" class="btn btn-primary w-100">Update Profile</button>
+
+            <!-- Additional Information -->
+            <h5 class="section-title"><i class="fas fa-info-circle me-2"></i>Additional Information</h5>
+            <div class="row mb-4">
+                <div class="col-md-6 mb-3">
+                    <label for="occupation" class="form-label">Occupation</label>
+                    <input type="text" class="form-control" id="occupation" name="occupation" 
+                           value="{{ user.occupation }}">
+                </div>
+                <div class="col-md-6 mb-3">
+                    <label for="interests" class="form-label">Reading Interests</label>
+                    <input type="text" class="form-control" id="interests" name="interests" 
+                           value="{{ user.reading_interests }}" placeholder="e.g., Fiction, Science, History">
+                </div>
+            </div>
+
+            <!-- Password Change -->
+            <h5 class="section-title"><i class="fas fa-lock me-2"></i>Change Password</h5>
+            <div class="row mb-4">
+                <div class="col-12">
+                    <label for="password" class="form-label">New Password</label>
+                    <input type="password" class="form-control" id="password" name="password" 
+                           placeholder="Leave blank to keep current password">
+                    <div class="form-text">Minimum 8 characters, at least one letter and one number</div>
+                </div>
+            </div>
+
+            <div class="d-grid gap-2">
+                <button type="submit" class="btn btn-primary">
+                    <i class="fas fa-save me-2"></i>Save Changes
+                </button>
+                <a href="{{ url_for('admin_dashboard' if session['role'] == 'admin' 
+                                  else 'librarian_dashboard' if session['role'] == 'librarian' 
+                                  else 'user_dashboard') }}" 
+                   class="btn btn-outline-secondary">
+                    <i class="fas fa-arrow-left me-2"></i>Back to Dashboard
+                </a>
+            </div>
         </form>
-        <div class="text-center mt-3">
-            <a href="{{ url_for('admin_dashboard' if session['role'] == 'admin' else 'librarian_dashboard' if session['role'] == 'librarian' else 'user_dashboard') }}" class="text-secondary">
-                Back to Dashboard
-            </a>
-        </div>
     </div>
+
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        document.getElementById('profileForm').addEventListener('submit', function(e) {
+            const password = document.getElementById('password').value;
+            if (password && password.length < 8) {
+                e.preventDefault();
+                alert('Password must be at least 8 characters long!');
+            }
+        });
+    </script>
 </body>
 </html>
