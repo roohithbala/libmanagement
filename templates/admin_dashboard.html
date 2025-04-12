@@ -36,22 +36,20 @@
     <header class="d-flex justify-content-between align-items-center mb-4">
         <h2>Admin Dashboard</h2>
         <nav>
-            <span>Welcome, {{ session["username"] }} (Admin)</span>
-            <a href="{{ url_for('logout') }}" class="btn btn-danger btn-sm ms-3">Logout</a>
+                        <span>Welcome, {{ session["username"] }} (Admin)</span>
+                        <a href="{{ url_for('profile') }}" class="btn btn-info btn-sm">My Profile</a>
+                        <a href="{{ url_for('logout') }}" class="btn btn-danger btn-sm ms-3">Logout</a>
+                        <a href="{{ url_for('admin_reset_password') }}" class="nav-link">
+                          
+                        </a>
+                        <a href="{{ url_for('password_reset_requests') }}" class="btn btn-outline-primary btn-sm ms-2">
+                            <i class="fas fa-key"></i> Reset Requests 
+                            {% if pending_resets %}
+                                <span class="badge bg-danger">{{ pending_resets }}</span>
+                            {% endif %}
+                        </a>
         </nav>
     </header>
-
-    <!-- Flash Messages -->
-    {% with messages = get_flashed_messages(with_categories=True) %}
-        {% if messages %}
-            {% for category, message in messages %}
-            <div class="alert alert-{{ category }} alert-dismissible fade show" role="alert">
-                {{ message }}
-                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-            </div>
-            {% endfor %}
-        {% endif %}
-    {% endwith %}
 
     <!-- Book Management Section -->
     <div class="card p-4 mb-4">

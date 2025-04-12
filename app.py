@@ -3,14 +3,30 @@ import requests
 from flask import Flask, render_template, request, redirect, url_for, session, flash
 from werkzeug.security import generate_password_hash, check_password_hash
 from datetime import datetime
+import secrets
+from functools import wraps
 
 from book import (update_book_location, borrow_book, return_book, get_book_history,
-                  add_book, update_book, delete_book, unlock_book,force_return_book,adjust_penalty)
+                 add_book, update_book, delete_book, unlock_book, force_return_book, 
+                 adjust_penalty)
 from chatbot_routes import chatbot_bp
 
 app = Flask(__name__)
 app.secret_key = "supersecretkey"
 DATABASE = "library.db"
+
+# Auth decorator
+def admin_librarian_required(f):
+    @wraps(f)
+    def decorated_function(*args, **kwargs):
+        if not session.get('user_id'):
+            flash('Please login to access this page.', 'warning')
+            return redirect(url_for('login'))
+        if session.get('role') not in ['admin', 'librarian']:
+            flash('Access denied. Admin or librarian privileges required.', 'danger')
+            return redirect(url_for('user_dashboard'))
+        return f(*args, **kwargs)
+    return decorated_function
 
 app.register_blueprint(chatbot_bp)
 
@@ -87,14 +103,30 @@ def init_db():
         );
         """)
         
+        # Create reset_requests table
+        conn.execute("""
+        CREATE TABLE IF NOT EXISTS reset_requests (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            user_id INTEGER NOT NULL,
+            username TEXT NOT NULL,
+            email TEXT NOT NULL,
+            reason TEXT NOT NULL,
+            status TEXT DEFAULT 'pending',
+            requested_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+            processed_at DATETIME,
+            processed_by INTEGER,
+            FOREIGN KEY (user_id) REFERENCES users(id),
+            FOREIGN KEY (processed_by) REFERENCES users(id)
+        );
+        """)
+        
+        print("Created reset_requests table")
         conn.commit()
 
 init_db()
 
-def fetch_book_cover(title, author, isbn=None):
-    """Fetch book cover using Open Library API using title and author search."""
+def fetch_book_cover(title, author):
     try:
-        # Search by title and author
         search_query = f"{title} {author}".replace(" ", "+")
         search_url = f"https://openlibrary.org/search.json?q={search_query}"
         response = requests.get(search_url)
@@ -102,14 +134,10 @@ def fetch_book_cover(title, author, isbn=None):
         if response.status_code == 200:
             data = response.json()
             if data.get('docs') and len(data['docs']) > 0:
-                # Get the first result's cover ID
                 first_result = data['docs'][0]
-                if first_result.get('cover_i'):
+                if (first_result.get('cover_i')):
                     return f"https://covers.openlibrary.org/b/id/{first_result['cover_i']}-L.jpg"
-
-        # If no cover found, return placeholder
         return "https://via.placeholder.com/150?text=No+Cover+Available"
-
     except Exception as e:
         print(f"Error fetching book cover: {e}")
         return "https://via.placeholder.com/150?text=Error"
@@ -232,7 +260,7 @@ def login():
             
             # Handle redirect after login
             next_page = session.pop('next', None)
-            if next_page:
+            if (next_page):
                 return redirect(next_page)
                 
             if user["role"] == "admin":
@@ -638,6 +666,164 @@ def profile():
 
     return render_template("profile.html", user=user, stats=stats)
 
+# Password Reset Routes
+@app.route("/forgot-password", methods=["GET", "POST"])
+def forgot_password():
+    if request.method == "POST":
+        email = request.form["email"]
+        username = request.form["username"]
+        reason = request.form["reason"]
+        
+        with get_db_connection() as conn:
+            user = conn.execute(
+                "SELECT * FROM users WHERE email = ? AND username = ?", 
+                (email, username)
+            ).fetchone()
+            
+            if not user:
+                flash("No account found with those credentials.", "danger")
+                return redirect(url_for("forgot_password"))
+            
+            existing = conn.execute(
+                "SELECT * FROM reset_requests WHERE user_id = ? AND status = 'pending'",
+                (user["id"],)
+            ).fetchone()
+            
+            if existing:
+                flash("You already have a pending reset request.", "warning")
+                return redirect(url_for("login"))
+            
+            conn.execute("""
+                INSERT INTO reset_requests (user_id, username, email, reason)
+                VALUES (?, ?, ?, ?)
+            """, (user["id"], username, email, reason))
+            conn.commit()
+            
+            flash("Password reset request submitted. Library staff will process it shortly.", "success")
+            return redirect(url_for("login"))
+                
+    return render_template("forgot_password.html")
+
+@app.route("/admin/password-requests")
+@admin_librarian_required
+def password_reset_requests():
+    with get_db_connection() as conn:
+        requests = conn.execute("""
+            SELECT r.*, u.role as user_role,
+                   datetime(r.requested_at) as formatted_date
+            FROM reset_requests r
+            JOIN users u ON r.user_id = u.id
+            WHERE r.status = 'pending'
+            ORDER BY r.requested_at DESC
+        """).fetchall()
+        
+    return render_template("password_reset_requests.html", requests=requests)
+
+@app.route("/admin/process-reset/<int:request_id>", methods=["POST"])
+@admin_librarian_required
+def process_reset_request(request_id):
+    action = request.form.get("action")
+    
+    with get_db_connection() as conn:
+        reset_request = conn.execute("""
+            SELECT r.*, u.role as user_role 
+            FROM reset_requests r
+            JOIN users u ON r.user_id = u.id
+            WHERE r.id = ? AND r.status = 'pending'
+        """, (request_id,)).fetchone()
+        
+        if not reset_request:
+            flash("Reset request not found or already processed.", "warning")
+            return redirect(url_for("password_reset_requests"))
+
+        if session['role'] == 'librarian' and reset_request['user_role'] != 'user':
+            flash("Librarians can only process user password resets.", "danger")
+            return redirect(url_for("password_reset_requests"))
+            
+        try:
+            if action == "approve":
+                temp_password = secrets.token_urlsafe(8)
+                hashed_password = generate_password_hash(temp_password, method="pbkdf2:sha256")
+                
+                conn.execute(
+                    "UPDATE users SET password = ? WHERE id = ?",
+                    (hashed_password, reset_request['user_id'])
+                )
+                
+                conn.execute("""
+                    UPDATE reset_requests 
+                    SET status = 'approved',
+                        processed_at = CURRENT_TIMESTAMP,
+                        processed_by = ?
+                    WHERE id = ?
+                """, (session['user_id'], request_id))
+                
+                conn.execute("""
+                    INSERT INTO admin_logs 
+                    (action, performed_by, affected_user, timestamp)
+                    VALUES (?, ?, ?, CURRENT_TIMESTAMP)
+                """, ('password_reset_approved', session['user_id'], reset_request['user_id']))
+                
+                conn.commit()
+                flash(f"Password reset approved. Temporary password: {temp_password}", "success")
+                
+            elif action == "deny":
+                conn.execute("""
+                    UPDATE reset_requests 
+                    SET status = 'denied',
+                        processed_at = CURRENT_TIMESTAMP,
+                        processed_by = ?
+                    WHERE id = ?
+                """, (session['user_id'], request_id))
+                
+                conn.execute("""
+                    INSERT INTO admin_logs 
+                    (action, performed_by, affected_user, timestamp)
+                    VALUES (?, ?, ?, CURRENT_TIMESTAMP)
+                """, ('password_reset_denied', session['user_id'], reset_request['user_id']))
+                
+                conn.commit()
+                flash("Password reset request denied.", "info")
+                
+        except Exception as e:
+            print(f"Error processing reset: {e}")
+            conn.rollback()
+            flash("An error occurred while processing the request.", "danger")
+            
+    return redirect(url_for("password_reset_requests"))
+
+@app.route("/reset-password/<token>", methods=["GET", "POST"])
+def reset_password(token):
+    if not token:
+        return redirect(url_for("login"))
+        
+    with get_db_connection() as conn:
+        user = conn.execute(
+            "SELECT * FROM users WHERE reset_token = ?", 
+            (token,)
+        ).fetchone()
+        
+        if not user:
+            flash("Invalid or expired reset link.", "danger")
+            return redirect(url_for("login"))
+            
+        if request.method == "POST":
+            password = request.form["password"]
+            confirm_password = request.form["confirm_password"]
+            
+            if password != confirm_password:
+                flash("Passwords do not match!", "danger")
+            else:
+                hashed_password = generate_password_hash(password, method="pbkdf2:sha256")
+                conn.execute(
+                    "UPDATE users SET password = ?, reset_token = NULL WHERE id = ?",
+                    (hashed_password, user["id"])
+                )
+                conn.commit()
+                flash("Password updated successfully!", "success")
+                return redirect(url_for("login"))
+                
+    return render_template("reset_password.html")
 @app.route("/book/<int:book_id>")
 def view_book(book_id):
     with get_db_connection() as conn:
@@ -715,7 +901,7 @@ def search():
     query = request.args.get("q", "")
     category = request.args.get("category", "")
     with get_db_connection() as conn:
-        if category:
+        if (category):
             books = conn.execute(
                 "SELECT * FROM books WHERE (title LIKE ? OR author LIKE ?) AND category = ?",
                 (f"%{query}%", f"%{query}%", category)
@@ -775,6 +961,127 @@ def my_history():
         current_books=current_books,
         history=history
     )
+
+@app.route("/admin/reset-password", methods=["GET", "POST"])
+@admin_librarian_required
+def admin_reset_password():
+    if request.method == "POST":
+        username = request.form.get("username")
+        new_password = request.form.get("new_password")
+        confirm_password = request.form.get("confirm_password")
+
+        if not all([username, new_password, confirm_password]):
+            flash("All fields are required!", "danger")
+            return redirect(url_for("admin_reset_password"))
+
+        if new_password != confirm_password:
+            flash("Passwords do not match!", "danger")
+            return redirect(url_for("admin_reset_password"))
+
+        try:
+            with get_db_connection() as conn:
+                # Check if user exists and get their current reset request if any
+                user = conn.execute("""
+                    SELECT u.*, r.id as request_id 
+                    FROM users u 
+                    LEFT JOIN reset_requests r ON u.id = r.user_id AND r.status = 'pending'
+                    WHERE u.username = ?
+                """, (username,)).fetchone()
+
+                if not user:
+                    flash("User not found!", "danger")
+                    return redirect(url_for("admin_reset_password"))
+
+                # Librarians can only reset regular user passwords
+                if session['role'] == 'librarian' and user['role'] != 'user':
+                    flash("Librarians can only reset regular user passwords!", "warning")
+                    return redirect(url_for("admin_reset_password"))
+
+                # Update password
+                hashed_password = generate_password_hash(new_password, method="pbkdf2:sha256")
+                conn.execute(
+                    "UPDATE users SET password = ? WHERE id = ?",
+                    (hashed_password, user['id'])
+                )
+
+                # Update reset request if exists
+                if user['request_id']:
+                    conn.execute("""
+                        UPDATE reset_requests 
+                        SET status = 'approved', 
+                            processed_at = CURRENT_TIMESTAMP,
+                            processed_by = ?
+                        WHERE id = ?
+                    """, (session['user_id'], user['request_id']))
+
+                # Log the action
+                conn.execute("""
+                    INSERT INTO admin_logs (action, performed_by, affected_user, timestamp)
+                    VALUES (?, ?, ?, CURRENT_TIMESTAMP)
+                """, ('password_reset', session['user_id'], user['id']))
+
+                conn.commit()
+                flash(f"Password reset successful for user: {username}", "success")
+                return redirect(url_for('password_reset_requests'))
+
+        except Exception as e:
+            print(f"Password reset error: {e}")
+            flash("An error occurred while resetting the password.", "danger")
+
+    return render_template("admin_reset_password.html")
+
+@app.route("/admin/create-reset-request", methods=["POST"])
+@admin_librarian_required
+def create_reset_request():
+    username = request.form.get("username")
+    email = request.form.get("email")
+    reason = request.form.get("reason")
+    
+    with get_db_connection() as conn:
+        # Verify user exists and matches email
+        user = conn.execute(
+            "SELECT * FROM users WHERE username = ? AND email = ?", 
+            (username, email)
+        ).fetchone()
+        
+        if not user:
+            flash("No account found with those credentials.", "danger")
+            return redirect(url_for("password_reset_requests"))
+            
+        # Check for existing pending request
+        existing = conn.execute(
+            "SELECT * FROM reset_requests WHERE user_id = ? AND status = 'pending'",
+            (user["id"],)
+        ).fetchone()
+        
+        if existing:
+            flash("User already has a pending reset request.", "warning")
+            return redirect(url_for("password_reset_requests"))
+        
+        try:
+            # Create reset request
+            conn.execute("""
+                INSERT INTO reset_requests 
+                (user_id, username, email, reason, status, requested_at)
+                VALUES (?, ?, ?, ?, 'pending', CURRENT_TIMESTAMP)
+            """, (user["id"], username, email, reason))
+            
+            # Log the action
+            conn.execute("""
+                INSERT INTO admin_logs 
+                (action, performed_by, affected_user, timestamp)
+                VALUES (?, ?, ?, CURRENT_TIMESTAMP)
+            """, ('reset_request_created', session['user_id'], user["id"]))
+            
+            conn.commit()
+            flash("Password reset request created successfully.", "success")
+            
+        except Exception as e:
+            print(f"Error creating reset request: {e}")
+            conn.rollback()
+            flash("Error creating reset request.", "danger")
+    
+    return redirect(url_for("password_reset_requests"))
 
 if __name__ == "__main__":
     app.run(debug=True)

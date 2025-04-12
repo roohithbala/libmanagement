@@ -172,7 +172,9 @@
         <h2 class="text-primary">User Dashboard</h2>
         <nav>
             <span class="fw-bold">Welcome, {{ session["username"] }} (User)</span>
-            <a href="{{ url_for('logout') }}" class="btn btn-danger btn-sm ms-3">Logout</a>
+            <a href="{{ url_for('profile') }}" class="btn btn-info btn-sm">My Profile</a>
+
+    <a href="{{ url_for('logout') }}" class="btn btn-danger btn-sm ms-3">Logout</a>
         </nav>
     </header>
 

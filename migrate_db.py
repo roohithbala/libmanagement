@@ -1,6 +1,43 @@
 import sqlite3
 from datetime import datetime
 
+def add_admin_logs_table():
+    DATABASE = "library.db"
+    with sqlite3.connect(DATABASE) as conn:
+        conn.execute("""
+        CREATE TABLE IF NOT EXISTS admin_logs (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            action TEXT NOT NULL,
+            performed_by INTEGER NOT NULL,
+            affected_user INTEGER NOT NULL,
+            timestamp DATETIME NOT NULL,
+            FOREIGN KEY (performed_by) REFERENCES users(id),
+            FOREIGN KEY (affected_user) REFERENCES users(id)
+        )
+        """)
+        print("Created admin_logs table")
+
+def add_reset_requests_table():
+    """Add table for password reset requests"""
+    DATABASE = "library.db"
+    with sqlite3.connect(DATABASE) as conn:
+        conn.execute("""
+        CREATE TABLE IF NOT EXISTS reset_requests (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            user_id INTEGER NOT NULL,
+            username TEXT NOT NULL,
+            email TEXT NOT NULL,
+            reason TEXT NOT NULL,
+            status TEXT DEFAULT 'pending',
+            requested_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+            processed_at DATETIME,
+            processed_by INTEGER,
+            FOREIGN KEY (user_id) REFERENCES users(id),
+            FOREIGN KEY (processed_by) REFERENCES users(id)
+        )
+        """)
+        print("Created reset_requests table")
+
 def migrate_database():
     """Add processed_by, return_note, and return_type columns to book_history table"""
     DATABASE = "library.db"
@@ -55,6 +92,24 @@ def migrate_database():
                 WHERE return_type IS NULL AND returned_at IS NOT NULL
             """)
             
+            # Add reset_token and reset_token_expiry columns to users table
+            cursor = conn.execute("PRAGMA table_info(users)")
+            columns = [column[1] for column in cursor.fetchall()]
+            
+            if 'reset_token' not in columns:
+                conn.execute("""
+                    ALTER TABLE users 
+                    ADD COLUMN reset_token TEXT
+                """)
+                print("Added reset_token column")
+            
+            if 'reset_token_expiry' not in columns:
+                conn.execute("""
+                    ALTER TABLE users 
+                    ADD COLUMN reset_token_expiry DATETIME
+                """)
+                print("Added reset_token_expiry column")
+            
             conn.commit()
             print("Migration completed successfully!")
             
@@ -65,6 +120,8 @@ def migrate_database():
         print(f"Error: {e}")
         return False
     
+    add_admin_logs_table()
+    add_reset_requests_table()
     return True
 
 if __name__ == "__main__":
