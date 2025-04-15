@@ -78,58 +78,19 @@ reset_requests - Password reset logs
 
 admin_logs - Admin activities
 
-📁 Project Structure
-cpp
-Copy
-Edit
-Library/
-├── app.py
-├── book.py
-├── chatbot_routes.py
-├── library_chatbot.py
-├── init_db.py
-├── migrate_db.py
-├── templates/
-│   ├── index.html
-│   ├── login.html
-│   ├── register.html
-│   ├── admin_dashboard.html
-│   ├── librarian_dashboard.html
-│   ├── user_dashboard.html
-│   └── ...
-├── static/
-│   ├── css/
-│   ├── js/
-│   └── images/
-├── requirements.txt
-├── .env
-├── library.db
-└── README.md
-▶️ How to Run the Project
-Clone the Repository
 
-bash
-Copy
-Edit
 git clone https://github.com/your-username/Library-Management-System.git
 cd Library-Management-System
 Install Dependencies
 
-bash
-Copy
-Edit
 pip install -r requirements.txt
 Initialize the Database
 
-bash
-Copy
-Edit
+
 python init_db.py
 Run the Application
 
-bash
-Copy
-Edit
+
 python app.py
 Access in Browser
 
