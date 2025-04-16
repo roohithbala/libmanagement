@@ -1,155 +1,192 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Admin Dashboard</title>
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css">
-    <style>
-        body {
-            background-color: #f8f9fa;
-        }
-        .card {
-            border: none;
-            border-radius: 10px;
-            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-        }
-        .btn-success {
-            background-color: #6a11cb;
-            border: none;
-        }
-        .btn-success:hover {
-            background-color: #2575fc;
-        }
-        .table thead {
-            background-color: #343a40;
-            color: white;
-        }
-        .table tbody tr:hover {
-            background-color: #f1f1f1;
-        }
-    </style>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Admin Dashboard </title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css" rel="stylesheet">
+  <style>
+    body {
+      background-color: #f1f3f5;
+      font-family: 'Segoe UI', sans-serif;
+    }
+
+    h2, h4 {
+      font-weight: 600;
+    }
+
+    header {
+      background: white;
+      padding: 1rem 1.5rem;
+      border-radius: 10px;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+    }
+
+    .card {
+      border: none;
+      border-radius: 1rem;
+      box-shadow: 0 4px 10px rgba(0, 0, 0, 0.07);
+      margin-bottom: 2rem;
+      background-color: white;
+    }
+
+    .btn-success {
+      background: linear-gradient(to right, #6a11cb, #2575fc);
+      border: none;
+      transition: all 0.3s ease;
+    }
+
+    .btn-success:hover {
+      filter: brightness(1.1);
+    }
+
+    .btn-group .btn {
+      margin-right: 4px;
+    }
+
+    .table thead {
+      background-color: #343a40;
+      color: white;
+    }
+
+    .table-hover tbody tr:hover {
+      background-color: #eef2f5;
+      transition: background-color 0.2s ease;
+    }
+
+    .badge {
+      font-size: 0.85rem;
+      padding: 0.4em 0.6em;
+      border-radius: 0.5rem;
+    }
+
+    nav span {
+      font-weight: 500;
+      margin-right: 10px;
+    }
+
+    .btn-outline-primary .badge {
+      top: -3px;
+      right: -8px;
+      font-size: 0.75rem;
+      position: relative;
+    }
+  </style>
 </head>
-<body class="container mt-5">
+<body class="container py-4">
 
-    <!-- Header -->
-    <header class="d-flex justify-content-between align-items-center mb-4">
-        <h2>Admin Dashboard</h2>
-        <nav>
-                        <span>Welcome, {{ session["username"] }} (Admin)</span>
-                        <a href="{{ url_for('profile') }}" class="btn btn-info btn-sm">My Profile</a>
-                        <a href="{{ url_for('logout') }}" class="btn btn-danger btn-sm ms-3">Logout</a>
-                        <a href="{{ url_for('admin_reset_password') }}" class="nav-link">
-                          
-                        </a>
-                        <a href="{{ url_for('password_reset_requests') }}" class="btn btn-outline-primary btn-sm ms-2">
-                            <i class="fas fa-key"></i> Reset Requests 
-                            {% if pending_resets %}
-                                <span class="badge bg-danger">{{ pending_resets }}</span>
-                            {% endif %}
-                        </a>
-        </nav>
-    </header>
+  <!-- Header -->
+  <header class="d-flex justify-content-between align-items-center mb-4">
+    <h2 class="text-primary"><i class="bi bi-speedometer2"></i> Admin Dashboard</h2>
+    <nav class="d-flex align-items-center">
+      <span>Welcome, <strong>{{ session["username"] }}</strong> (Admin)</span>
+      <a href="{{ url_for('profile') }}" class="btn btn-outline-info btn-sm me-2">My Profile</a>
+      <a href="{{ url_for('logout') }}" class="btn btn-outline-danger btn-sm me-2">Logout</a>
+      <a href="{{ url_for('password_reset_requests') }}" class="btn btn-outline-primary btn-sm position-relative">
+        <i class="bi bi-shield-lock"></i> Reset Requests
+        {% if pending_resets %}
+          <span class="badge bg-danger">{{ pending_resets }}</span>
+        {% endif %}
+      </a>
+    </nav>
+  </header>
 
-    <!-- Book Management Section -->
-    <div class="card p-4 mb-4">
-        <div class="d-flex justify-content-between align-items-center mb-3">
-            <h4>Book Management</h4>
-            <a href="{{ url_for('add_book_route') }}" class="btn btn-success">Add New Book</a>
-        </div>
-        <table class="table table-bordered table-hover">
-            <thead>
-                <tr>
-                    <th>ID</th>
-                    <th>Title</th>
-                    <th>Author</th>
-                    <th>Status</th>
-                    <th>Location</th>
-                    <th>Current Borrowers</th>
-                    <th>Penalty</th>
-                    <th>Actions</th>
-                </tr>
-            </thead>
-            <tbody>
-                {% for book in books %}
-                <tr>
-                    <td>{{ book.id }}</td>
-                    <td>{{ book.title }}</td>
-                    <td>{{ book.author }}</td>
-                    <td>
-                        <span class="badge {% if book.available_copies > 0 %}bg-success{% else %}bg-danger{% endif %}">
-                            {{ "Available" if book.available_copies > 0 else "Taken" }}
-                            ({{ book.available_copies }}/{{ book.total_copies }})
-                        </span>
-                    </td>
-                    <td>{{ book.main_area }} - Rack {{ book.rack_no }} Col {{ book.column_no }}</td>
-                    <td>
-                        {% if book.current_borrowers %}
-                            {{ book.current_borrowers }}
-                        {% else %}
-                            -
-                        {% endif %}
-                    </td>
-                    <td>
-                        {% if book.max_penalty > 0 %}
-                            <span class="text-danger">₹{{ "%.2f"|format(book.max_penalty) }}</span>
-                        {% else %}
-                            -
-                        {% endif %}
-                    </td>
-                    <td>
-                        <div class="btn-group">
-                            <a href="{{ url_for('view_book', book_id=book.id) }}" 
-                               class="btn btn-info btn-sm">View</a>
-                            <a href="{{ url_for('update_book_route', book_id=book.id) }}" 
-                               class="btn btn-warning btn-sm">Edit</a>
-                            {% if not book.available_copies %}
-                                <button type="submit" form="force-return-{{ book.id }}" 
-                                        class="btn btn-danger btn-sm">Force Return</button>
-                            {% endif %}
-                            <form method="POST" 
-                                  action="{{ url_for('delete_book_route', book_id=book.id) }}"
-                                  class="d-inline"
-                                  onsubmit="return confirm('Are you sure you want to delete this book?');">
-                                <button type="submit" class="btn btn-danger btn-sm">Delete</button>
-                            </form>
-                        </div>
-                        <form id="force-return-{{ book.id }}" 
-                              action="{{ url_for('force_return_route', book_id=book.id) }}" 
-                              method="POST" class="d-none"></form>
-                    </td>
-                </tr>
-                {% endfor %}
-            </tbody>
-        </table>
+  <!-- Book Management Section -->
+  <div class="card p-4">
+    <div class="d-flex justify-content-between align-items-center mb-3">
+      <h4><i class="bi bi-journals me-2"></i>Book Management</h4>
+      <a href="{{ url_for('add_book_route') }}" class="btn btn-success">
+        <i class="bi bi-plus-circle me-1"></i> Add New Book
+      </a>
     </div>
-
-    <!-- User Management Section -->
-    <div class="card p-4">
-        <h4>User Management</h4>
-        <table class="table table-striped table-hover">
-            <thead>
-                <tr>
-                    <th>ID</th>
-                    <th>Username</th>
-                    <th>Email</th>
-                    <th>Role</th>
-                </tr>
-            </thead>
-            <tbody>
-                {% for user in users %}
-                <tr>
-                    <td>{{ user.id }}</td>
-                    <td>{{ user.username }}</td>
-                    <td>{{ user.email }}</td>
-                    <td>{{ user.role }}</td>
-                </tr>
-                {% endfor %}
-            </tbody>
-        </table>
+    <div class="table-responsive">
+      <table class="table table-bordered table-hover align-middle">
+        <thead class="text-center">
+          <tr>
+            <th>ID</th>
+            <th>Title</th>
+            <th>Author</th>
+            <th>Status</th>
+            <th>Location</th>
+            <th>Current Borrowers</th>
+            <th>Penalty</th>
+            <th>Actions</th>
+          </tr>
+        </thead>
+        <tbody class="text-center">
+          {% for book in books %}
+          <tr>
+            <td>{{ book.id }}</td>
+            <td>{{ book.title }}</td>
+            <td>{{ book.author }}</td>
+            <td>
+              <span class="badge {% if book.available_copies > 0 %}bg-success{% else %}bg-danger{% endif %}">
+                {{ "Available" if book.available_copies > 0 else "Taken" }} 
+                ({{ book.available_copies }}/{{ book.total_copies }})
+              </span>
+            </td>
+            <td>{{ book.main_area }} - Rack {{ book.rack_no }}, Col {{ book.column_no }}</td>
+            <td>{{ book.current_borrowers or "-" }}</td>
+            <td>
+              {% if book.max_penalty > 0 %}
+                <span class="text-danger">₹{{ "%.2f"|format(book.max_penalty) }}</span>
+              {% else %}
+                -
+              {% endif %}
+            </td>
+            <td>
+              <div class="btn-group">
+                <a href="{{ url_for('view_book', book_id=book.id) }}" class="btn btn-info btn-sm">View</a>
+                <a href="{{ url_for('update_book_route', book_id=book.id) }}" class="btn btn-warning btn-sm">Edit</a>
+                {% if not book.available_copies %}
+                <button type="submit" form="force-return-{{ book.id }}" class="btn btn-danger btn-sm">Force Return</button>
+                {% endif %}
+                <form method="POST"
+                      action="{{ url_for('delete_book_route', book_id=book.id) }}"
+                      class="d-inline"
+                      onsubmit="return confirm('Are you sure you want to delete this book?');">
+                  <button type="submit" class="btn btn-outline-danger btn-sm">Delete</button>
+                </form>
+              </div>
+              <form id="force-return-{{ book.id }}"
+                    action="{{ url_for('force_return_route', book_id=book.id) }}"
+                    method="POST" class="d-none"></form>
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
     </div>
+  </div>
 
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+  <!-- User Management Section -->
+  <div class="card p-4">
+    <h4><i class="bi bi-people-fill me-2"></i>User Management</h4>
+    <div class="table-responsive">
+      <table class="table table-striped table-hover align-middle">
+        <thead class="text-center">
+          <tr>
+            <th>ID</th>
+            <th>Username</th>
+            <th>Email</th>
+            <th>Role</th>
+          </tr>
+        </thead>
+        <tbody class="text-center">
+          {% for user in users %}
+          <tr>
+            <td>{{ user.id }}</td>
+            <td>{{ user.username }}</td>
+            <td>{{ user.email }}</td>
+            <td>{{ user.role }}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
 
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 </body>
 </html>

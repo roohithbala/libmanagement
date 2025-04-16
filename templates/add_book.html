@@ -1,127 +1,205 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Add Book</title>
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css">
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Add New Book </title>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" />
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css" />
+  <style>
+    body {
+      background-color: #f8f9fa;
+      font-family: 'Segoe UI', sans-serif;
+    }
+
+    header h2 {
+      font-size: 1.75rem;
+      font-weight: 600;
+    }
+
+    .card {
+      border-radius: 1rem;
+      background-color: #ffffff;
+      transition: transform 0.2s ease, box-shadow 0.2s ease;
+    }
+
+    .card:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 0.5rem 1rem rgba(0,0,0,0.1);
+    }
+
+    .form-label i {
+      color: #0d6efd;
+      margin-right: 6px;
+    }
+
+    .form-control:focus, .form-select:focus {
+      border-color: #0d6efd;
+      box-shadow: 0 0 0 0.2rem rgba(13,110,253,0.25);
+      transition: box-shadow 0.3s ease;
+    }
+
+    .btn-primary {
+      transition: background-color 0.3s ease-in-out, transform 0.2s ease;
+    }
+
+    .btn-primary:hover {
+      background-color: #0b5ed7;
+      transform: scale(1.02);
+    }
+
+    .btn-outline-secondary {
+      transition: color 0.3s ease, border-color 0.3s ease;
+    }
+
+    .btn-outline-secondary:hover {
+      color: #0d6efd;
+      border-color: #0d6efd;
+    }
+
+    .form-text {
+      font-size: 0.85rem;
+      color: #6c757d;
+    }
+
+    .invalid-feedback {
+      font-size: 0.875rem;
+    }
+  </style>
 </head>
-<body class="container mt-5">
+<body class="container py-5">
 
-    <header class="d-flex justify-content-between align-items-center mb-4">
-        <h2 class="text-primary">Add a New Book</h2>
-        <nav>
-            {% if session.get('role') == 'admin' %}
-                <a href="{{ url_for('admin_dashboard') }}" class="btn btn-secondary">Back to Dashboard</a>
-            {% elif session.get('role') == 'librarian' %}
-                <a href="{{ url_for('librarian_dashboard') }}" class="btn btn-secondary">Back to Dashboard</a>
-            {% endif %}
-        </nav>
-    </header>
+  <header class="d-flex justify-content-between align-items-center mb-4">
+    <h2 class="text-primary"><i class="bi bi-journal-plus"></i> Add a New Book</h2>
+    <nav>
+      {% if session.get('role') == 'admin' %}
+        <a href="{{ url_for('admin_dashboard') }}" class="btn btn-outline-secondary">
+          <i class="bi bi-arrow-left"></i> Dashboard
+        </a>
+      {% elif session.get('role') == 'librarian' %}
+        <a href="{{ url_for('librarian_dashboard') }}" class="btn btn-outline-secondary">
+          <i class="bi bi-arrow-left"></i> Dashboard
+        </a>
+      {% endif %}
+    </nav>
+  </header>
 
-    <!-- Flash Messages -->
-    {% with messages = get_flashed_messages(with_categories=True) %}
-        {% if messages %}
-            {% for category, message in messages %}
-                <div class="alert alert-{{ category }} alert-dismissible fade show" role="alert">
-                    {{ message }}
-                    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-                </div>
-            {% endfor %}
-        {% endif %}
-    {% endwith %}
-
-    <!-- Check for Role Authorization -->
-    {% if session.get("role") in ["admin", "librarian"] %}
-    <div class="card p-4 shadow-sm">
-        <form action="{{ url_for('add_book_route') }}" method="POST" class="needs-validation" novalidate>
-            <div class="mb-3">
-                <label for="title" class="form-label">Title:</label>
-                <input type="text" id="title" name="title" class="form-control" required>
-                <div class="invalid-feedback">Please enter a book title.</div>
-            </div>
-            <div class="mb-3">
-                <label for="author" class="form-label">Author:</label>
-                <input type="text" id="author" name="author" class="form-control" required>
-                <div class="invalid-feedback">Please enter the author's name.</div>
-            </div>
-            <div class="mb-3">
-                <label for="category" class="form-label">Category:</label>
-                <select id="category" name="category" class="form-select" required>
-                    <option value="">Select Category</option>
-                    <option value="Fiction">Fiction</option>
-                    <option value="Non-Fiction">Non-Fiction</option>
-                    <option value="Science">Science</option>
-                    <option value="History">History</option>
-                    <option value="Biography">Biography</option>
-                    <option value="Children">Children</option>
-                    <option value="Mystery">Mystery</option>
-                    <option value="Fantasy">Fantasy</option>
-                    <option value="Romance">Romance</option>
-                    <option value="Others">Others</option>
-                </select>
-                <div class="invalid-feedback">Please select a category.</div>
-            </div>
-            <div class="mb-3">
-                <label for="publication_year" class="form-label">Publication Year:</label>
-                <input type="number" id="publication_year" name="publication_year" class="form-control" min="1000" max="2099" required>
-                <div class="invalid-feedback">Please enter a valid publication year.</div>
-            </div>
-            <div class="mb-3">
-                <label for="isbn" class="form-label">ISBN:</label>
-                <input type="text" id="isbn" name="isbn" class="form-control" pattern="\d{10,13}" required>
-                <div class="invalid-feedback">Please enter a valid ISBN (10-13 digits).</div>
-            </div>
-            <div class="mb-3">
-                <label for="num_copies" class="form-label">Number of Copies:</label>
-                <input type="number" id="num_copies" name="num_copies" 
-                       class="form-control" min="1" value="1" required>
-                <div class="invalid-feedback">Please enter at least 1 copy.</div>
-            </div>
-            <div class="mb-3">
-                <label for="main_area" class="form-label">Main Area:</label>
-                <select id="main_area" name="main_area" class="form-select" required>
-                    <option value="">Select Main Area</option>
-                    <option value="Area A">Area A</option>
-                    <option value="Area B">Area B</option>
-                    <option value="Area C">Area C</option>
-                    <option value="Area D">Area D</option>
-                    <option value="Area E">Area E</option>
-                </select>
-                <div class="invalid-feedback">Please select a main area.</div>
-            </div>
-            <div class="mb-3">
-                <label for="rack_no" class="form-label">Rack Number:</label>
-                <input type="text" id="rack_no" name="rack_no" class="form-control" required>
-                <div class="invalid-feedback">Please enter the rack number.</div>
-            </div>
-            <div class="mb-3">
-                <label for="column_no" class="form-label">Column Number:</label>
-                <input type="text" id="column_no" name="column_no" class="form-control" required>
-                <div class="invalid-feedback">Please enter the column number.</div>
-            </div>
-            <button type="submit" class="btn btn-primary">Add Book</button>
-        </form>
-    </div>
-    {% else %}
-        <div class="alert alert-danger mt-4">Access Denied! Only Admins and Librarians can add books.</div>
+  <!-- Flash Messages -->
+  {% with messages = get_flashed_messages(with_categories=True) %}
+    {% if messages %}
+      {% for category, message in messages %}
+        <div class="alert alert-{{ category }} alert-dismissible fade show shadow-sm" role="alert">
+          {{ message }}
+          <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+        </div>
+      {% endfor %}
     {% endif %}
+  {% endwith %}
 
-    <script>
-        (function() {
-            'use strict';
-            var forms = document.querySelectorAll('.needs-validation');
-            Array.prototype.slice.call(forms).forEach(function(form) {
-                form.addEventListener('submit', function(event) {
-                    if (!form.checkValidity()) {
-                        event.preventDefault();
-                        event.stopPropagation();
-                    }
-                    form.classList.add('was-validated');
-                }, false);
-            });
-        })();
-    </script>
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+  {% if session.get("role") in ["admin", "librarian"] %}
+  <div class="card p-4 shadow-sm">
+    <form action="{{ url_for('add_book_route') }}" method="POST" class="needs-validation" novalidate>
+      <div class="row g-3">
+        <div class="col-md-6">
+          <label for="title" class="form-label"><i class="bi bi-book"></i> Book Title</label>
+          <input type="text" id="title" name="title" class="form-control" placeholder="E.g. The Great Gatsby" required>
+          <div class="invalid-feedback">Please enter the book title.</div>
+        </div>
+
+        <div class="col-md-6">
+          <label for="author" class="form-label"><i class="bi bi-person-fill"></i> Author</label>
+          <input type="text" id="author" name="author" class="form-control" placeholder="E.g. F. Scott Fitzgerald" required>
+          <div class="invalid-feedback">Please enter the author's name.</div>
+        </div>
+
+        <div class="col-md-6">
+          <label for="category" class="form-label"><i class="bi bi-tags-fill"></i> Category</label>
+          <select id="category" name="category" class="form-select" required>
+            <option value="">Choose a category</option>
+            <option>Fiction</option>
+            <option>Non-Fiction</option>
+            <option>Science</option>
+            <option>History</option>
+            <option>Biography</option>
+            <option>Children</option>
+            <option>Mystery</option>
+            <option>Fantasy</option>
+            <option>Romance</option>
+            <option>Others</option>
+          </select>
+          <div class="invalid-feedback">Select a category.</div>
+        </div>
+
+        <div class="col-md-6">
+          <label for="publication_year" class="form-label"><i class="bi bi-calendar2"></i> Publication Year</label>
+          <input type="number" id="publication_year" name="publication_year" class="form-control" placeholder="E.g. 2005" min="1000" max="2099" required>
+          <div class="invalid-feedback">Enter a valid year (1000–2099).</div>
+        </div>
+
+        <div class="col-md-6">
+          <label for="isbn" class="form-label"><i class="bi bi-upc"></i> ISBN</label>
+          <input type="text" id="isbn" name="isbn" class="form-control" pattern="\d{10,13}" placeholder="E.g. 9783161484100" required>
+          <div class="invalid-feedback">Enter a valid 10–13 digit ISBN.</div>
+        </div>
+
+        <div class="col-md-6">
+          <label for="num_copies" class="form-label"><i class="bi bi-stack"></i> No. of Copies</label>
+          <input type="number" id="num_copies" name="num_copies" class="form-control" min="1" value="1" required>
+          <div class="invalid-feedback">At least 1 copy is required.</div>
+        </div>
+
+        <div class="col-md-6">
+          <label for="main_area" class="form-label"><i class="bi bi-building"></i> Main Area</label>
+          <select id="main_area" name="main_area" class="form-select" required>
+            <option value="">Choose main area</option>
+            <option>Area A</option>
+            <option>Area B</option>
+            <option>Area C</option>
+            <option>Area D</option>
+            <option>Area E</option>
+          </select>
+          <div class="invalid-feedback">Select the main area.</div>
+        </div>
+
+        <div class="col-md-3">
+          <label for="rack_no" class="form-label"><i class="bi bi-box-seam"></i> Rack No.</label>
+          <input type="text" id="rack_no" name="rack_no" class="form-control" placeholder="E.g. R12" required>
+          <div class="invalid-feedback">Enter rack number.</div>
+        </div>
+
+        <div class="col-md-3">
+          <label for="column_no" class="form-label"><i class="bi bi-layout-three-columns"></i> Column No.</label>
+          <input type="text" id="column_no" name="column_no" class="form-control" placeholder="E.g. C4" required>
+          <div class="invalid-feedback">Enter column number.</div>
+        </div>
+      </div>
+
+      <div class="text-end mt-4">
+        <button type="submit" class="btn btn-primary px-4 py-2">
+          <i class="bi bi-check-circle-fill"></i> Add Book
+        </button>
+      </div>
+    </form>
+  </div>
+  {% else %}
+    <div class="alert alert-danger shadow-sm mt-4"><i class="bi bi-shield-lock-fill"></i> Access Denied: Only Admins and Librarians can access this page.</div>
+  {% endif %}
+
+  <script>
+    (() => {
+      'use strict';
+      const forms = document.querySelectorAll('.needs-validation');
+      Array.from(forms).forEach(form => {
+        form.addEventListener('submit', event => {
+          if (!form.checkValidity()) {
+            event.preventDefault();
+            event.stopPropagation();
+          }
+          form.classList.add('was-validated');
+        }, false);
+      });
+    })();
+  </script>
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 </body>
 </html>
