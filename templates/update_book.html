@@ -1,115 +1,166 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Update Book Details</title>
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css">
-    <style>
-        body { background-color: #f8f9fa; }
-        .card { border: none; border-radius: 10px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
-        .btn-primary { background-color: #6a11cb; border: none; }
-        .btn-primary:hover { background-color: #2575fc; }
-        .btn-secondary { background-color: #6c757d; }
-        .btn-secondary:hover { background-color: #5a6268; }
-    </style>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Update Book Details</title>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css"/>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
+  <style>
+    body {
+      background: linear-gradient(to right, #f3f4f6, #e2e8f0);
+      font-family: 'Segoe UI', sans-serif;
+    }
+
+    .form-label {
+      font-weight: 500;
+    }
+
+    .card {
+      border: none;
+      border-radius: 16px;
+      box-shadow: 0 8px 20px rgba(0, 0, 0, 0.05);
+      background-color: #fff;
+      transition: all 0.3s ease;
+    }
+
+    .card:hover {
+      transform: translateY(-3px);
+    }
+
+    .btn-primary {
+      background: linear-gradient(135deg, #6a11cb, #2575fc);
+      border: none;
+      padding: 10px 18px;
+      font-weight: 500;
+      border-radius: 8px;
+      transition: background 0.3s ease;
+    }
+
+    .btn-primary:hover {
+      background: linear-gradient(135deg, #4c1cb9, #1b66f8);
+    }
+
+    .btn-secondary {
+      border-radius: 8px;
+    }
+
+    .form-control:focus, .form-select:focus {
+      border-color: #6a11cb;
+      box-shadow: 0 0 0 0.2rem rgba(106, 17, 203, 0.25);
+    }
+
+    .page-title {
+      font-size: 1.8rem;
+      font-weight: bold;
+      color: #343a40;
+    }
+
+    .form-text {
+      font-size: 0.85rem;
+      color: #6c757d;
+    }
+
+    .form-section {
+      padding-top: 1.5rem;
+      padding-bottom: 1rem;
+    }
+
+    .icon-label i {
+      margin-right: 6px;
+      color: #6a11cb;
+    }
+  </style>
 </head>
-<body class="container mt-5">
-    <h2 class="text-primary mb-4">Update Book Details</h2>
+<body class="container py-5">
 
-    {% with messages = get_flashed_messages(with_categories=true) %}
-      {% if messages %}
-          {% for category, message in messages %}
-              <div class="alert alert-{{ category }} alert-dismissible fade show" role="alert">
-                  {{ message }}
-                  <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-              </div>
-          {% endfor %}
-      {% endif %}
-    {% endwith %}
+  <h2 class="page-title mb-4"><i class="fas fa-book-edit me-2"></i>Update Book Details</h2>
 
-    <div class="card p-4">
-        <form method="POST">
-            <div class="mb-3">
-                <label for="title" class="form-label">Title</label>
-                <input type="text" id="title" name="title" class="form-control" value="{{ book.title }}" required>
-            </div>
-            <div class="mb-3">
-                <label for="author" class="form-label">Author</label>
-                <input type="text" id="author" name="author" class="form-control" value="{{ book.author }}" required>
-            </div>
-            <div class="mb-3">
-                <label for="category" class="form-label">Category</label>
-                <select id="category" name="category" class="form-select" required>
-                    <option value="">Select Category</option>
-                    <option value="Fiction" {% if book.category == "Fiction" %}selected{% endif %}>Fiction</option>
-                    <option value="Non-Fiction" {% if book.category == "Non-Fiction" %}selected{% endif %}>Non-Fiction</option>
-                    <option value="Science" {% if book.category == "Science" %}selected{% endif %}>Science</option>
-                    <option value="History" {% if book.category == "History" %}selected{% endif %}>History</option>
-                    <option value="Biography" {% if book.category == "Biography" %}selected{% endif %}>Biography</option>
-                    <option value="Children" {% if book.category == "Children" %}selected{% endif %}>Children</option>
-                    <option value="Mystery" {% if book.category == "Mystery" %}selected{% endif %}>Mystery</option>
-                    <option value="Fantasy" {% if book.category == "Fantasy" %}selected{% endif %}>Fantasy</option>
-                    <option value="Romance" {% if book.category == "Romance" %}selected{% endif %}>Romance</option>
-                    <option value="Others" {% if book.category == "Others" %}selected{% endif %}>Others</option>
-                </select>
-            </div>
-            <div class="mb-3">
-                <label for="publication_year" class="form-label">Publication Year</label>
-                <input type="number" id="publication_year" name="publication_year" class="form-control" value="{{ book.publication_year }}" required>
-            </div>
-            <div class="mb-3">
-                <label for="isbn" class="form-label">ISBN</label>
-                <input type="text" id="isbn" name="isbn" class="form-control" value="{{ book.isbn }}" required>
-            </div>
-            <div class="mb-3">
-                <label for="num_copies" class="form-label">Number of Copies</label>
-                <input type="number" 
-                       id="num_copies" 
-                       name="num_copies" 
-                       class="form-control" 
-                       min="1" 
-                       value="{{ book.total_copies }}" 
-                       required>
-                <div class="form-text">
-                    Current borrowed copies: {{ book.total_copies - book.available_copies }}
-                </div>
-                <div class="invalid-feedback">
-                    Please enter at least 1 copy. Cannot be less than currently borrowed copies.
-                </div>
-            </div>
-            <!-- Location Fields -->
-            <div class="mb-3">
-                <label for="main_area" class="form-label">Main Area</label>
-                <select id="main_area" name="main_area" class="form-select" required>
-                    <option value="">Select Main Area</option>
-                    <option value="Area A" {% if book.main_area == "Area A" %}selected{% endif %}>Area A</option>
-                    <option value="Area B" {% if book.main_area == "Area B" %}selected{% endif %}>Area B</option>
-                    <option value="Area C" {% if book.main_area == "Area C" %}selected{% endif %}>Area C</option>
-                    <option value="Area D" {% if book.main_area == "Area D" %}selected{% endif %}>Area D</option>
-                    <option value="Area E" {% if book.main_area == "Area E" %}selected{% endif %}>Area E</option>
-                </select>
-            </div>
-            <div class="mb-3">
-                <label for="rack_no" class="form-label">Rack Number</label>
-                <input type="text" id="rack_no" name="rack_no" class="form-control" value="{{ book.rack_no }}" required>
-            </div>
-            <div class="mb-3">
-                <label for="column_no" class="form-label">Column Number</label>
-                <input type="text" id="column_no" name="column_no" class="form-control" value="{{ book.column_no }}" required>
-            </div>
-            <div class="d-flex justify-content-between">
-                <button type="submit" class="btn btn-primary">Update Book</button>
-                {% if session.get('role') == 'admin' %}
-                    <a href="{{ url_for('admin_dashboard') }}" class="btn btn-secondary">Cancel</a>
-                {% elif session.get('role') == 'librarian' %}
-                    <a href="{{ url_for('librarian_dashboard') }}" class="btn btn-secondary">Cancel</a>
-                {% else %}
-                    <a href="{{ url_for('home') }}" class="btn btn-secondary">Cancel</a>
-                {% endif %}
-            </div>
-        </form>
-    </div>
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+  {% with messages = get_flashed_messages(with_categories=true) %}
+    {% if messages %}
+      {% for category, message in messages %}
+        <div class="alert alert-{{ category }} alert-dismissible fade show" role="alert">
+          {{ message }}
+          <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+        </div>
+      {% endfor %}
+    {% endif %}
+  {% endwith %}
+
+  <div class="card p-4">
+    <form method="POST">
+      <div class="row g-3">
+        <div class="col-md-6">
+          <label for="title" class="form-label icon-label"><i class="fas fa-book"></i>Title</label>
+          <input type="text" id="title" name="title" class="form-control" value="{{ book.title }}" required>
+        </div>
+        <div class="col-md-6">
+          <label for="author" class="form-label icon-label"><i class="fas fa-user-pen"></i>Author</label>
+          <input type="text" id="author" name="author" class="form-control" value="{{ book.author }}" required>
+        </div>
+
+        <div class="col-md-6">
+          <label for="category" class="form-label icon-label"><i class="fas fa-tags"></i>Category</label>
+          <select id="category" name="category" class="form-select" required>
+            <option value="">Select Category</option>
+            {% for option in ["Fiction", "Non-Fiction", "Science", "History", "Biography", "Children", "Mystery", "Fantasy", "Romance", "Others"] %}
+              <option value="{{ option }}" {% if book.category == option %}selected{% endif %}>{{ option }}</option>
+            {% endfor %}
+          </select>
+        </div>
+        <div class="col-md-6">
+          <label for="publication_year" class="form-label icon-label"><i class="fas fa-calendar-alt"></i>Publication Year</label>
+          <input type="number" id="publication_year" name="publication_year" class="form-control" value="{{ book.publication_year }}" required>
+        </div>
+
+        <div class="col-md-6">
+          <label for="isbn" class="form-label icon-label"><i class="fas fa-barcode"></i>ISBN</label>
+          <input type="text" id="isbn" name="isbn" class="form-control" value="{{ book.isbn }}" required>
+        </div>
+        <div class="col-md-6">
+          <label for="num_copies" class="form-label icon-label"><i class="fas fa-layer-group"></i>Number of Copies</label>
+          <input type="number" id="num_copies" name="num_copies" class="form-control" min="1" value="{{ book.total_copies }}" required>
+          <div class="form-text">
+            Borrowed: {{ book.total_copies - book.available_copies }} | Available: {{ book.available_copies }}
+          </div>
+        </div>
+
+        <div class="col-md-4">
+          <label for="main_area" class="form-label icon-label"><i class="fas fa-location-dot"></i>Main Area</label>
+          <select id="main_area" name="main_area" class="form-select" required>
+            <option value="">Select Area</option>
+            {% for area in ["Area A", "Area B", "Area C", "Area D", "Area E"] %}
+              <option value="{{ area }}" {% if book.main_area == area %}selected{% endif %}>{{ area }}</option>
+            {% endfor %}
+          </select>
+        </div>
+
+        <div class="col-md-4">
+          <label for="rack_no" class="form-label icon-label"><i class="fas fa-box"></i>Rack Number</label>
+          <input type="text" id="rack_no" name="rack_no" class="form-control" value="{{ book.rack_no }}" required>
+        </div>
+
+        <div class="col-md-4">
+          <label for="column_no" class="form-label icon-label"><i class="fas fa-columns"></i>Column Number</label>
+          <input type="text" id="column_no" name="column_no" class="form-control" value="{{ book.column_no }}" required>
+        </div>
+      </div>
+
+      <div class="d-flex justify-content-between mt-4">
+        <button type="submit" class="btn btn-primary">
+          <i class="fas fa-save me-1"></i>Update Book
+        </button>
+        {% if session.get('role') == 'admin' %}
+          <a href="{{ url_for('admin_dashboard') }}" class="btn btn-secondary"><i class="fas fa-arrow-left me-1"></i>Cancel</a>
+        {% elif session.get('role') == 'librarian' %}
+          <a href="{{ url_for('librarian_dashboard') }}" class="btn btn-secondary"><i class="fas fa-arrow-left me-1"></i>Cancel</a>
+        {% else %}
+          <a href="{{ url_for('home') }}" class="btn btn-secondary"><i class="fas fa-arrow-left me-1"></i>Cancel</a>
+        {% endif %}
+      </div>
+    </form>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 </body>
 </html>

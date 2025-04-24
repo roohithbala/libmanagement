@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Admin Dashboard </title>
+  <title>Admin Dashboard</title>
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
   <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css" rel="stylesheet">
   <style>
@@ -41,8 +41,13 @@
       filter: brightness(1.1);
     }
 
-    .btn-group .btn {
+    .btn-group .btn, .btn-sm {
       margin-right: 4px;
+      transition: all 0.25s ease;
+    }
+
+    .btn-sm:hover {
+      transform: scale(1.05);
     }
 
     .table thead {
@@ -72,6 +77,10 @@
       font-size: 0.75rem;
       position: relative;
     }
+
+    .table-warning {
+      border-left: 4px solid #ffc107;
+    }
   </style>
 </head>
 <body class="container py-4">
@@ -95,11 +104,17 @@
   <!-- Book Management Section -->
   <div class="card p-4">
     <div class="d-flex justify-content-between align-items-center mb-3">
-      <h4><i class="bi bi-journals me-2"></i>Book Management</h4>
+      <h4><i class="bi bi-journals me-2"></i> Book Management</h4>
       <a href="{{ url_for('add_book_route') }}" class="btn btn-success">
         <i class="bi bi-plus-circle me-1"></i> Add New Book
       </a>
     </div>
+
+    <!-- Search Bar -->
+    <div class="mb-3">
+      <input type="text" class="form-control" id="bookSearch" placeholder="Search books by title, author, status...">
+    </div>
+
     <div class="table-responsive">
       <table class="table table-bordered table-hover align-middle">
         <thead class="text-center">
@@ -114,14 +129,14 @@
             <th>Actions</th>
           </tr>
         </thead>
-        <tbody class="text-center">
+        <tbody class="text-center" id="bookTableBody">
           {% for book in books %}
-          <tr>
+          <tr class="{% if book.available_copies == 0 %}table-warning{% endif %}">
             <td>{{ book.id }}</td>
             <td>{{ book.title }}</td>
             <td>{{ book.author }}</td>
             <td>
-              <span class="badge {% if book.available_copies > 0 %}bg-success{% else %}bg-danger{% endif %}">
+              <span class="badge {% if book.available_copies > 0 %}bg-success{% else %}bg-danger{% endif %}" data-bs-toggle="tooltip" title="{{ book.available_copies }} copies available">
                 {{ "Available" if book.available_copies > 0 else "Taken" }} 
                 ({{ book.available_copies }}/{{ book.total_copies }})
               </span>
@@ -137,16 +152,24 @@
             </td>
             <td>
               <div class="btn-group">
-                <a href="{{ url_for('view_book', book_id=book.id) }}" class="btn btn-info btn-sm">View</a>
-                <a href="{{ url_for('update_book_route', book_id=book.id) }}" class="btn btn-warning btn-sm">Edit</a>
+                <a href="{{ url_for('view_book', book_id=book.id) }}" class="btn btn-info btn-sm">
+                  <i class="bi bi-eye"></i> View
+                </a>
+                <a href="{{ url_for('update_book_route', book_id=book.id) }}" class="btn btn-warning btn-sm">
+                  <i class="bi bi-pencil-square"></i> Edit
+                </a>
                 {% if not book.available_copies %}
-                <button type="submit" form="force-return-{{ book.id }}" class="btn btn-danger btn-sm">Force Return</button>
+                <button type="submit" form="force-return-{{ book.id }}" class="btn btn-danger btn-sm">
+                  <i class="bi bi-arrow-repeat"></i> Force Return
+                </button>
                 {% endif %}
                 <form method="POST"
                       action="{{ url_for('delete_book_route', book_id=book.id) }}"
                       class="d-inline"
                       onsubmit="return confirm('Are you sure you want to delete this book?');">
-                  <button type="submit" class="btn btn-outline-danger btn-sm">Delete</button>
+                  <button type="submit" class="btn btn-outline-danger btn-sm">
+                    <i class="bi bi-trash3"></i> Delete
+                  </button>
                 </form>
               </div>
               <form id="force-return-{{ book.id }}"
@@ -162,7 +185,7 @@
 
   <!-- User Management Section -->
   <div class="card p-4">
-    <h4><i class="bi bi-people-fill me-2"></i>User Management</h4>
+    <h4><i class="bi bi-people-fill me-2"></i> User Management</h4>
     <div class="table-responsive">
       <table class="table table-striped table-hover align-middle">
         <thead class="text-center">
@@ -188,5 +211,19 @@
   </div>
 
   <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+  <script>
+    // Tooltip activation
+    const tooltipTriggerList = document.querySelectorAll('[data-bs-toggle="tooltip"]');
+    tooltipTriggerList.forEach(el => new bootstrap.Tooltip(el));
+
+    // Book search filtering
+    document.getElementById("bookSearch").addEventListener("input", function () {
+      const keyword = this.value.toLowerCase();
+      document.querySelectorAll("#bookTableBody tr").forEach(row => {
+        const text = row.innerText.toLowerCase();
+        row.style.display = text.includes(keyword) ? "" : "none";
+      });
+    });
+  </script>
 </body>
 </html>
