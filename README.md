@@ -47,7 +47,7 @@ A web-based application built with **Python Flask** and **SQLite3**, designed to
 ## 💾 Requirements
 
 Python 3.6 or higher and the following packages:
-'''
+``` bash
 Flask==3.0.2
 Flask-SQLAlchemy==3.1.1
 Werkzeug==3.0.1
@@ -64,7 +64,7 @@ pytest-cov==4.1.0
 python-dotenv==1.0.1
 black==24.2.0
 flake8==7.0.0
-'''
+```
  # Database Schema
 
 users - User details and roles
@@ -82,22 +82,26 @@ admin_logs - Admin activities
 
 git clone https://github.com/your-username/Library-Management-System.git
 cd Library-Management-System
-Install Dependencies
-
+# Install Dependencies
+```bash
 pip install -r requirements.txt
-Initialize the Database
-
+```
+# Initialize the Database
+```bash
 
 python init_db.py
-Run the Application
-
+```
+# Run the Application
+``` bash
 
 python app.py
-Access in Browser
-
+```
+# Access in Browser
+``` bash
 Go to http://127.0.0.1:5000
+```
 
-🌟 Future Enhancements
+# 🌟 Future Enhancements
 📧 Email notifications for due books
 
 📱 Mobile application version
@@ -108,11 +112,11 @@ Go to http://127.0.0.1:5000
 
 🔐 Two-factor authentication for users
 
-🤝 Contributing
+# 🤝 Contributing
 Pull requests are welcome! For major changes, open an issue first to discuss what you would like to change.
 
-📄 License
+# 📄 License
 This project is open-source and available under the MIT License.
 
-👨‍💻 Author
+## 👨‍💻 Author
 Roohith Bala G – GitHub
