@@ -47,7 +47,7 @@ A web-based application built with **Python Flask** and **SQLite3**, designed to
 ## 💾 Requirements
 
 Python 3.6 or higher and the following packages:
-
+'''
 Flask==3.0.2
 Flask-SQLAlchemy==3.1.1
 Werkzeug==3.0.1
@@ -64,7 +64,8 @@ pytest-cov==4.1.0
 python-dotenv==1.0.1
 black==24.2.0
 flake8==7.0.0
- Database Schema
+'''
+ # Database Schema
 
 users - User details and roles
 
